@@ -1,23 +1,76 @@
-import { useState } from "react";
-import { Link } from "react-router";
+import { useState, FormEvent, useEffect } from "react";
+import { Link, useNavigate } from "react-router";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
 import Button from "../ui/button/Button";
+import Toast from "../ui/toast/Toast";
+import { useAuth } from "../../context/AuthContext";
 
 export default function SignInForm() {
+  const navigate = useNavigate();
+  const { login, isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError("");
+
+    if (!username.trim()) {
+      setError("Username is required");
+      return;
+    }
+
+    if (!password) {
+      setError("Password is required");
+      return;
+    }
+
+    setIsLoading(true);
+
+    const success = await login(username.trim(), password);
+
+    setIsLoading(false);
+
+    if (success) {
+      setShowToast(true);
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 500);
+    } else {
+      setError("Invalid username or password");
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1">
+    <>
+      <Toast
+        message="Login successful!"
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+      />
+      <div className="flex flex-col flex-1">
       <div className="w-full max-w-md pt-10 mx-auto">
         <Link
-          to="/"
+          to="/signin"
           className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
           <ChevronLeftIcon className="size-5" />
-          Back to dashboard
+          Booking System
         </Link>
       </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
@@ -27,7 +80,7 @@ export default function SignInForm() {
               Sign In
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Enter your email and password to sign in!
+              Enter your username and password to sign in!
             </p>
           </div>
           <div>
@@ -83,13 +136,21 @@ export default function SignInForm() {
                 </span>
               </div>
             </div>
-            <form>
+            <form onSubmit={handleSubmit}>
               <div className="space-y-6">
                 <div>
                   <Label>
-                    Email <span className="text-error-500">*</span>{" "}
+                    Username <span className="text-error-500">*</span>{" "}
                   </Label>
-                  <Input placeholder="info@gmail.com" />
+                  <Input 
+                    placeholder="admin or customer" 
+                    value={username}
+                    onChange={(e) => {
+                      setUsername(e.target.value);
+                      setError("");
+                    }}
+                    error={!!error}
+                  />
                 </div>
                 <div>
                   <Label>
@@ -99,6 +160,12 @@ export default function SignInForm() {
                     <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        setError("");
+                      }}
+                      error={!!error}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -111,6 +178,9 @@ export default function SignInForm() {
                       )}
                     </span>
                   </div>
+                  {error && (
+                    <p className="mt-1.5 text-xs text-error-500">{error}</p>
+                  )}
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -127,12 +197,25 @@ export default function SignInForm() {
                   </Link>
                 </div>
                 <div>
-                  <Button className="w-full" size="sm">
-                    Sign in
+                  <Button className="w-full" size="sm" disabled={isLoading}>
+                    {isLoading ? "Signing in..." : "Sign in"}
                   </Button>
                 </div>
               </div>
             </form>
+
+            {/* Dummy Users Info */}
+            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                Dummy Users:
+              </p>
+              <div className="text-xs text-gray-500 dark:text-gray-500 space-y-1">
+                <p>Admin: username: "admin", password: "admin123"</p>
+                <p>Customer: username: "customer", password: "customer123"</p>
+                <p>Ahmad: username: "ahmad", password: "password123"</p>
+                <p>John: username: "john", password: "password123"</p>
+              </div>
+            </div>
 
             <div className="mt-5">
               <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
@@ -149,5 +232,6 @@ export default function SignInForm() {
         </div>
       </div>
     </div>
+    </>
   );
 }

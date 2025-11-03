@@ -15,22 +15,40 @@ import Calendar from "./pages/Calendar";
 import Bookings from "./pages/Bookings/Bookings";
 import CreateBooking from "./pages/Bookings/CreateBooking";
 import EditBooking from "./pages/Bookings/EditBooking";
+import Services from "./pages/Services/Services";
+import CreateService from "./pages/Services/CreateService";
+import EditService from "./pages/Services/EditService";
+import Staffs from "./pages/Staff/Staffs";
+import CreateStaff from "./pages/Staff/CreateStaff";
+import EditStaff from "./pages/Staff/EditStaff";
+import Users from "./pages/Users/Users";
+import CreateUser from "./pages/Users/CreateUser";
+import EditUser from "./pages/Users/EditUser";
 import BasicTables from "./pages/Tables/BasicTables";
-import FormElements from "./pages/Forms/FormElements";
 import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
-import Home from "./pages/Dashboard/Home";
+import BookingDashboard from "./pages/Dashboard/BookingDashboard";
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 export default function App() {
   return (
     <>
-      <Router>
-        <ScrollToTop />
-        <Routes>
-          {/* Dashboard Layout */}
-          <Route element={<AppLayout />}>
-            <Route index path="/" element={<Home />} />
+      <AuthProvider>
+        <Router>
+          <ScrollToTop />
+          <Routes>
+          {/* Dashboard Layout - Protected Routes */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index path="/" element={<BookingDashboard />} />
+            <Route path="/dashboard" element={<BookingDashboard />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />
@@ -38,10 +56,16 @@ export default function App() {
             <Route path="/bookings" element={<Bookings />} />
             <Route path="/bookings/new" element={<CreateBooking />} />
             <Route path="/bookings/edit/:id" element={<EditBooking />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/services/new" element={<CreateService />} />
+            <Route path="/services/edit/:id" element={<EditService />} />
+            <Route path="/staff" element={<Staffs />} />
+            <Route path="/staff/new" element={<CreateStaff />} />
+            <Route path="/staff/edit/:id" element={<EditStaff />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/users/new" element={<CreateUser />} />
+            <Route path="/users/edit/:id" element={<EditUser />} />
             <Route path="/blank" element={<Blank />} />
-
-            {/* Forms */}
-            <Route path="/form-elements" element={<FormElements />} />
 
             {/* Tables */}
             <Route path="/basic-tables" element={<BasicTables />} />
@@ -65,8 +89,9 @@ export default function App() {
 
           {/* Fallback Route */}
           <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Router>
+          </Routes>
+        </Router>
+      </AuthProvider>
     </>
   );
 }

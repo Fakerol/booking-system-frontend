@@ -7,7 +7,7 @@ export default function CreateBooking() {
   return (
     <>
       <PageMeta
-        title="Create New Booking | TailAdmin - React Admin Dashboard Template"
+        title="Create New Booking | JustBook - React Admin Dashboard Template"
         description="Create a new booking"
       />
       <PageBreadcrumb pageTitle="Create New Booking" />

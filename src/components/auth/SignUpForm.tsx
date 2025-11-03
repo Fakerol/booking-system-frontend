@@ -1,22 +1,97 @@
-import { useState } from "react";
-import { Link } from "react-router";
+import { useState, FormEvent, useEffect } from "react";
+import { Link, useNavigate } from "react-router";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
+import Toast from "../ui/toast/Toast";
+import { useAuth } from "../../context/AuthContext";
 
 export default function SignUpForm() {
+  const navigate = useNavigate();
+  const { signup, isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError("");
+
+    if (!username.trim()) {
+      setError("Username is required");
+      return;
+    }
+
+    if (username.length < 3) {
+      setError("Username must be at least 3 characters");
+      return;
+    }
+
+    if (!password) {
+      setError("Password is required");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (!isChecked) {
+      setError("You must agree to the Terms and Conditions");
+      return;
+    }
+
+    setIsLoading(true);
+
+    // Simulate signup - in real app, this would call an API
+    const success = await signup(username.trim(), password);
+
+    setIsLoading(false);
+
+    if (success) {
+      setShowToast(true);
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 500);
+    } else {
+      setError("Username already exists. Please choose a different username.");
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 w-full overflow-y-auto lg:w-1/2 no-scrollbar">
+    <>
+      <Toast
+        message="Signup successful! Welcome!"
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+      />
+      <div className="flex flex-col flex-1 w-full overflow-y-auto lg:w-1/2 no-scrollbar">
       <div className="w-full max-w-md mx-auto mb-5 sm:pt-10">
         <Link
-          to="/"
+          to="/signin"
           className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
           <ChevronLeftIcon className="size-5" />
-          Back to dashboard
+          Booking System
         </Link>
       </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
@@ -26,7 +101,7 @@ export default function SignUpForm() {
               Sign Up
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Enter your email and password to sign up!
+              Enter your username and password to sign up!
             </p>
           </div>
           <div>
@@ -82,44 +157,24 @@ export default function SignUpForm() {
                 </span>
               </div>
             </div>
-            <form>
+            <form onSubmit={handleSubmit}>
               <div className="space-y-5">
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  {/* <!-- First Name --> */}
-                  <div className="sm:col-span-1">
-                    <Label>
-                      First Name<span className="text-error-500">*</span>
-                    </Label>
-                    <Input
-                      type="text"
-                      id="fname"
-                      name="fname"
-                      placeholder="Enter your first name"
-                    />
-                  </div>
-                  {/* <!-- Last Name --> */}
-                  <div className="sm:col-span-1">
-                    <Label>
-                      Last Name<span className="text-error-500">*</span>
-                    </Label>
-                    <Input
-                      type="text"
-                      id="lname"
-                      name="lname"
-                      placeholder="Enter your last name"
-                    />
-                  </div>
-                </div>
-                {/* <!-- Email --> */}
+                {/* <!-- Username --> */}
                 <div>
                   <Label>
-                    Email<span className="text-error-500">*</span>
+                    Username<span className="text-error-500">*</span>
                   </Label>
                   <Input
-                    type="email"
-                    id="email"
-                    name="email"
-                    placeholder="Enter your email"
+                    type="text"
+                    id="username"
+                    name="username"
+                    placeholder="Enter your username"
+                    value={username}
+                    onChange={(e) => {
+                      setUsername(e.target.value);
+                      setError("");
+                    }}
+                    error={!!error && error.includes("username")}
                   />
                 </div>
                 {/* <!-- Password --> */}
@@ -131,6 +186,12 @@ export default function SignUpForm() {
                     <Input
                       placeholder="Enter your password"
                       type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        setError("");
+                      }}
+                      error={!!error && error.includes("password")}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -144,6 +205,27 @@ export default function SignUpForm() {
                     </span>
                   </div>
                 </div>
+                {/* <!-- Confirm Password --> */}
+                <div>
+                  <Label>
+                    Confirm Password<span className="text-error-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      placeholder="Confirm your password"
+                      type={showPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        setError("");
+                      }}
+                      error={!!error && error.includes("match")}
+                    />
+                  </div>
+                </div>
+                {error && (
+                  <p className="text-xs text-error-500">{error}</p>
+                )}
                 {/* <!-- Checkbox --> */}
                 <div className="flex items-center gap-3">
                   <Checkbox
@@ -164,8 +246,12 @@ export default function SignUpForm() {
                 </div>
                 {/* <!-- Button --> */}
                 <div>
-                  <button className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
-                    Sign Up
+                  <button 
+                    type="submit"
+                    disabled={isLoading}
+                    className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? "Signing up..." : "Sign Up"}
                   </button>
                 </div>
               </div>
@@ -186,5 +272,6 @@ export default function SignUpForm() {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -6,7 +6,7 @@ export default function EditBooking() {
   return (
     <>
       <PageMeta
-        title="Edit Booking | TailAdmin - React Admin Dashboard Template"
+        title="Edit Booking | JustBook - React Admin Dashboard Template"
         description="Edit booking details"
       />
       <PageBreadcrumb pageTitle="Edit Booking" />
