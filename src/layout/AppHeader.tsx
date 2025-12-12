@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-import { Link } from "react-router";
 import { useSidebar } from "../context/SidebarContext";
 import { ThemeToggleButton } from "../components/common/ThemeToggleButton";
 import NotificationDropdown from "../components/header/NotificationDropdown";
@@ -82,13 +81,6 @@ const AppHeader: React.FC = () => {
             )}
             {/* Cross Icon */}
           </button>
-
-          <Link to="/" className="lg:hidden">
-            <img
-              src="/images/logo/rps-logo.png"
-              alt="Logo"
-            />
-          </Link>
 
           <button
             onClick={toggleApplicationMenu}
