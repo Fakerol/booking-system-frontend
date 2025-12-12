@@ -9,129 +9,101 @@ import {
 } from "../../ui/table";
 
 import Input from "../../form/input/InputField";
-import Select from "../../form/Select";
+import Badge from "../../ui/badge/Badge";
 import { ChevronLeftIcon, AngleRightIcon } from "../../../icons";
-import ServiceDetailsModal from "../../modals/ServiceDetailsModal";
+import CustomerDetailsModal from "../../modals/CustomerDetailsModal";
 import Toast from "../../ui/toast/Toast";
 
-export interface Service {
+export interface Customer {
   _id: string;
-  name: string;
-  duration_minutes: number;
-  price: number;
-  description?: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  email: string;
+  completed_bookings_count: number;
+  free_appointment_available: boolean;
+  total_free_appointments_used: number;
 }
 
-// Generate 30 dummy services
-const generateDummyServices = (): Service[] => {
-  const serviceNames = [
-    "Haircut", "Hair Color", "Hair Styling", "Beard Trim", "Shampoo",
-    "Hair Extension", "Hair Treatment", "Hair Wash", "Hair Cut & Style",
-    "Hair Coloring", "Full Haircut", "Hair Spa", "Hair Straightening",
-    "Hair Perm", "Hair Highlighting", "Hair Blow Dry", "Hair Braiding",
-    "Hair Updo", "Hair Bleaching", "Hair Toning", "Hair Glazing",
-    "Hair Conditioning", "Hair Scalp Treatment", "Hair Keratin Treatment",
-    "Hair Frizz Control", "Hair Volumizing", "Hair Smoothing", "Hair Curling",
-    "Hair Rebonding", "Hair Bonding"
+// Generate 30 dummy customers
+const generateDummyCustomers = (): Customer[] => {
+  const firstNames = [
+    "John", "Jane", "Bob", "Alice", "Charlie", "Diana", "Edward", "Fiona",
+    "George", "Hannah", "Isaac", "Julia", "Kevin", "Lisa", "Michael", "Nancy",
+    "Oliver", "Patricia", "Quinn", "Rachel", "Steve", "Tina", "Uma", "Victor",
+    "Wendy", "Xavier", "Yara", "Zoe", "Adam", "Bella"
   ];
 
-  const durations = [15, 30, 45, 60, 90, 120];
-  const prices = [15, 25, 35, 50, 75, 100, 150, 200];
+  const lastNames = [
+    "Doe", "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller",
+    "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Wilson", "Anderson",
+    "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Thompson", "White",
+    "Harris", "Sanchez", "Clark", "Ramirez", "Lewis", "Robinson", "Walker"
+  ];
 
-  const services: Service[] = [];
+  const customers: Customer[] = [];
   
   for (let i = 0; i < 30; i++) {
-    const randomDurationIndex = Math.floor(Math.random() * durations.length);
-    const randomPriceIndex = Math.floor(Math.random() * prices.length);
+    const firstName = firstNames[i % firstNames.length];
+    const lastName = lastNames[i % lastNames.length];
+    const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`;
+    const phone = `+1${Math.floor(Math.random() * 9000000000) + 1000000000}`;
     
-    const descriptions = [
-      "Professional haircut service with modern styling techniques.",
-      "Expert hair coloring service with premium color products.",
-      "Professional hair styling for any occasion.",
-      "Precise beard trimming and shaping service.",
-      "Deep cleansing shampoo treatment for healthy hair.",
-      "Natural hair extension service with quality materials.",
-      "Intensive hair treatment for damaged hair.",
-      "Refreshing hair wash and conditioning service.",
-      "Complete haircut and styling package.",
-      "Professional hair coloring with consultation.",
-      "Full service haircut with styling.",
-      "Relaxing hair spa treatment.",
-      "Hair straightening service for smooth results.",
-      "Professional hair perming service.",
-      "Hair highlighting for dimension and depth.",
-      "Professional blow dry styling service.",
-      "Intricate hair braiding service.",
-      "Elegant hair updo for special occasions.",
-      "Hair bleaching service for lightening.",
-      "Hair toning service for color correction.",
-      "Hair glazing for shine and protection.",
-      "Deep conditioning treatment for hair health.",
-      "Scalp treatment for healthy hair growth.",
-      "Keratin treatment for smooth, frizz-free hair.",
-      "Frizz control treatment for manageable hair.",
-      "Volumizing treatment for fuller hair.",
-      "Hair smoothing service for sleek look.",
-      "Hair curling service for beautiful waves.",
-      "Hair rebonding for straight, smooth hair.",
-      "Hair bonding treatment for strength.",
-    ];
-
-    services.push({
+    // Generate random loyalty data
+    const completedBookings = Math.floor(Math.random() * 15); // 0-14 bookings
+    const freeAppointmentAvailable = completedBookings >= 10;
+    
+    customers.push({
       _id: (i + 1).toString(),
-      name: serviceNames[i % serviceNames.length],
-      duration_minutes: durations[randomDurationIndex],
-      price: prices[randomPriceIndex],
-      description: descriptions[i % descriptions.length],
+      first_name: firstName,
+      last_name: lastName,
+      phone: phone,
+      email: email,
+      completed_bookings_count: completedBookings,
+      free_appointment_available: freeAppointmentAvailable,
+      total_free_appointments_used: Math.floor(completedBookings / 10),
     });
   }
 
-  return services;
+  return customers;
 };
 
-const serviceData: Service[] = generateDummyServices();
+const customerData: Customer[] = generateDummyCustomers();
 
 const ITEMS_PER_PAGE = 20;
 
-export default function ServiceTable() {
+export default function CustomerTable() {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [durationFilter, setDurationFilter] = useState("");
-  const [priceFilter, setPriceFilter] = useState("");
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
-  // Filter services based on search and filters
-  const filteredServices = useMemo(() => {
-    return serviceData.filter((service) => {
+  // Filter customers based on search
+  const filteredCustomers = useMemo(() => {
+    return customerData.filter((customer) => {
+      const fullName = `${customer.first_name} ${customer.last_name}`.toLowerCase();
       const matchesSearch =
         searchTerm === "" ||
-        service.name.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesDuration = 
-        durationFilter === "" || 
-        service.duration_minutes.toString() === durationFilter;
-
-      const matchesPrice = 
-        priceFilter === "" || 
-        service.price.toString() === priceFilter;
-
-      return matchesSearch && matchesDuration && matchesPrice;
+        fullName.includes(searchTerm.toLowerCase()) ||
+        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.phone.includes(searchTerm);
+      
+      return matchesSearch;
     });
-  }, [searchTerm, durationFilter, priceFilter]);
+  }, [searchTerm]);
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredServices.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedServices = filteredServices.slice(startIndex, endIndex);
+  const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, durationFilter, priceFilter]);
+  }, [searchTerm]);
 
   const handlePrevious = () => {
     if (currentPage > 1) {
@@ -149,46 +121,31 @@ export default function ServiceTable() {
     setCurrentPage(page);
   };
 
-  const handleRowClick = (service: Service) => {
-    setSelectedService(service);
+  const handleRowClick = (customer: Customer) => {
+    setSelectedCustomer(customer);
     setIsModalOpen(true);
   };
 
-  const handleEdit = (serviceId: string) => {
-    navigate(`/services/edit/${serviceId}`);
+  const handleEdit = (customerId: string) => {
+    navigate(`/customers/edit/${customerId}`);
   };
 
-  const handleDelete = (serviceId: string) => {
-    // In a real app, this would call an API to delete the service
-    console.log("Delete service:", serviceId);
-    // For now, we'll just log it since we're using dummy data
+  const handleDelete = (customerId: string) => {
+    // In a real app, this would call an API to delete the customer
+    console.log("Delete customer:", customerId);
     setShowToast(true);
-    // In a real app, you would make an API call here
-    // After successful deletion, show the toast
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
-    setSelectedService(null);
+    setSelectedCustomer(null);
   };
-
-  // Get unique durations for filter
-  const uniqueDurations = useMemo(() => {
-    const durationSet = new Set(serviceData.map(s => s.duration_minutes.toString()));
-    return Array.from(durationSet).sort((a, b) => parseInt(a) - parseInt(b));
-  }, []);
-
-  // Get unique prices for filter
-  const uniquePrices = useMemo(() => {
-    const priceSet = new Set(serviceData.map(s => s.price.toString()));
-    return Array.from(priceSet).sort((a, b) => parseFloat(a) - parseFloat(b));
-  }, []);
 
   return (
     <div className="space-y-4">
       {/* Filter Controls */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/[0.05] dark:bg-white/[0.03]">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-1">
           {/* Search Input */}
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -196,47 +153,9 @@ export default function ServiceTable() {
             </label>
             <Input
               type="text"
-              placeholder="Search by service name..."
+              placeholder="Search by name, email, or phone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          {/* Duration Filter */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Duration (minutes)
-            </label>
-            <Select
-              placeholder="All Durations"
-              options={[
-                { value: "", label: "All Durations" },
-                ...uniqueDurations.map((duration) => ({
-                  value: duration,
-                  label: `${duration} min`,
-                })),
-              ]}
-              defaultValue=""
-              onChange={(value) => setDurationFilter(value)}
-            />
-          </div>
-
-          {/* Price Filter */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Price (RM)
-            </label>
-            <Select
-              placeholder="All Prices"
-              options={[
-                { value: "", label: "All Prices" },
-                ...uniquePrices.map((price) => ({
-                  value: price,
-                  label: `RM ${price}`,
-                })),
-              ]}
-              defaultValue=""
-              onChange={(value) => setPriceFilter(value)}
             />
           </div>
         </div>
@@ -253,60 +172,85 @@ export default function ServiceTable() {
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Service Name
+                  Name
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Duration
+                  Email
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Price
+                  Phone
                 </TableCell>
               </TableRow>
             </TableHeader>
 
             {/* Table Body */}
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-              {paginatedServices.length > 0 ? (
-                paginatedServices.map((service) => (
+              {paginatedCustomers.length > 0 ? (
+                paginatedCustomers.map((customer) => (
                   <TableRow 
-                    key={service._id}
+                    key={customer._id}
                     className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
                     <td 
                       className="px-5 py-4 sm:px-6 text-start"
-                      onClick={() => handleRowClick(service)}
+                      onClick={() => handleRowClick(customer)}
                     >
                       <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                        {service.name}
+                        {customer.first_name} {customer.last_name}
                       </span>
                     </td>
                     <td 
                       className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400"
-                      onClick={() => handleRowClick(service)}
+                      onClick={() => handleRowClick(customer)}
                     >
-                      {service.duration_minutes} min
+                      {customer.email}
                     </td>
                     <td 
                       className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400"
-                      onClick={() => handleRowClick(service)}
+                      onClick={() => handleRowClick(customer)}
                     >
-                      RM {service.price}
+                      {customer.phone}
+                    </td>
+                    <td 
+                      className="px-4 py-3 text-start"
+                      onClick={() => handleRowClick(customer)}
+                    >
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-600 dark:text-gray-400">
+                            {customer.completed_bookings_count}/10
+                          </span>
+                          {customer.free_appointment_available && (
+                            <Badge size="sm" color="success">
+                              Free Available
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden dark:bg-gray-700">
+                          <div
+                            className="h-full bg-brand-500 transition-all"
+                            style={{
+                              width: `${Math.min((customer.completed_bookings_count / 10) * 100, 100)}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
                     </td>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
                   <td
-                    colSpan={3}
+                    colSpan={4}
                     className="px-5 py-8 text-center text-gray-500 dark:text-gray-400"
                   >
-                    No services found matching your filters.
+                    No customers found matching your filters.
                   </td>
                 </TableRow>
               )}
@@ -321,9 +265,9 @@ export default function ServiceTable() {
           <div className="text-sm text-gray-700 dark:text-gray-300">
             Showing{" "}
             <span className="font-medium">
-              {startIndex + 1} to {Math.min(endIndex, filteredServices.length)}
+              {startIndex + 1} to {Math.min(endIndex, filteredCustomers.length)}
             </span>{" "}
-            of <span className="font-medium">{filteredServices.length}</span>{" "}
+            of <span className="font-medium">{filteredCustomers.length}</span>{" "}
             results
           </div>
 
@@ -388,18 +332,18 @@ export default function ServiceTable() {
         </div>
       )}
 
-      {/* Service Details Modal */}
-      <ServiceDetailsModal
+      {/* Customer Details Modal */}
+      <CustomerDetailsModal
         isOpen={isModalOpen}
         onClose={closeModal}
-        service={selectedService}
+        customer={selectedCustomer}
         onEdit={handleEdit}
         onDelete={handleDelete}
       />
 
       {/* Success Toast */}
       <Toast
-        message="Service deleted successfully!"
+        message="Customer deleted successfully!"
         isVisible={showToast}
         onClose={() => setShowToast(false)}
       />

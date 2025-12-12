@@ -18,6 +18,9 @@ import EditBooking from "./pages/Bookings/EditBooking";
 import Services from "./pages/Services/Services";
 import CreateService from "./pages/Services/CreateService";
 import EditService from "./pages/Services/EditService";
+import Customers from "./pages/Customers/Customers";
+import CreateCustomer from "./pages/Customers/CreateCustomer";
+import EditCustomer from "./pages/Customers/EditCustomer";
 import Staffs from "./pages/Staff/Staffs";
 import CreateStaff from "./pages/Staff/CreateStaff";
 import EditStaff from "./pages/Staff/EditStaff";
@@ -29,6 +32,7 @@ import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import BookingDashboard from "./pages/Dashboard/BookingDashboard";
+import Reports from "./pages/Reports/Reports";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -59,12 +63,16 @@ export default function App() {
             <Route path="/services" element={<Services />} />
             <Route path="/services/new" element={<CreateService />} />
             <Route path="/services/edit/:id" element={<EditService />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/customers/new" element={<CreateCustomer />} />
+            <Route path="/customers/edit/:id" element={<EditCustomer />} />
             <Route path="/staff" element={<Staffs />} />
             <Route path="/staff/new" element={<CreateStaff />} />
             <Route path="/staff/edit/:id" element={<EditStaff />} />
             <Route path="/users" element={<Users />} />
             <Route path="/users/new" element={<CreateUser />} />
             <Route path="/users/edit/:id" element={<EditUser />} />
+            <Route path="/reports" element={<Reports />} />
             <Route path="/blank" element={<Blank />} />
 
             {/* Tables */}

@@ -1,20 +1,19 @@
-import { useState, FormEvent, useEffect, useCallback } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
-import { useDropzone } from "react-dropzone";
 import ComponentCard from "../common/ComponentCard";
 import Form from "../form/Form";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
+import TextArea from "../form/input/TextArea";
 import Button from "../ui/button/Button";
 import Toast from "../ui/toast/Toast";
 import { Service } from "../tables/Services/ServiceTable";
-import { PlusIcon, TrashBinIcon } from "../../icons";
 
 interface ServiceFormData {
   name: string;
   duration_minutes: number;
   price: number;
-  images: File[];
+  description: string;
 }
 
 // Mock function to fetch service by ID
@@ -27,6 +26,22 @@ const fetchServiceById = (id: string): Service | null => {
     "Hair Coloring", "Full Haircut", "Hair Spa", "Hair Straightening",
   ];
   
+  const descriptions = [
+    "Professional haircut service with modern styling techniques.",
+    "Expert hair coloring service with premium color products.",
+    "Professional hair styling for any occasion.",
+    "Precise beard trimming and shaping service.",
+    "Deep cleansing shampoo treatment for healthy hair.",
+    "Natural hair extension service with quality materials.",
+    "Intensive hair treatment for damaged hair.",
+    "Refreshing hair wash and conditioning service.",
+    "Complete haircut and styling package.",
+    "Professional hair coloring with consultation.",
+    "Full service haircut with styling.",
+    "Relaxing hair spa treatment.",
+    "Hair straightening service for smooth results.",
+  ];
+  
   // Generate a mock service based on ID
   const idx = parseInt(id) % serviceNames.length;
   return {
@@ -34,10 +49,7 @@ const fetchServiceById = (id: string): Service | null => {
     name: serviceNames[idx],
     duration_minutes: [15, 30, 45, 60][idx % 4],
     price: [15, 25, 35, 50][idx % 4],
-    images: [
-      `https://picsum.photos/200/200?random=${id}-1`,
-      `https://picsum.photos/200/200?random=${id}-2`,
-    ],
+    description: descriptions[idx % descriptions.length] || "",
   };
 };
 
@@ -49,15 +61,13 @@ export default function EditServiceForm() {
     name: "",
     duration_minutes: 30,
     price: 0,
-    images: [],
+    description: "",
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof ServiceFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showToast, setShowToast] = useState(false);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [existingImages, setExistingImages] = useState<string[]>([]);
 
   // Load service data on mount
   useEffect(() => {
@@ -68,57 +78,12 @@ export default function EditServiceForm() {
           name: service.name,
           duration_minutes: service.duration_minutes,
           price: service.price,
-          images: [],
+          description: service.description || "",
         });
-        setExistingImages(service.images);
-        setImagePreviews(service.images);
       }
       setIsLoading(false);
     }
   }, [id]);
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    setFormData((prev) => {
-      const newFiles = [...prev.images, ...acceptedFiles].slice(0, 10); // Limit to 10 images
-      return { ...prev, images: newFiles };
-    });
-    
-    // Create previews for new images
-    acceptedFiles.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreviews((prev) => [...prev, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      "image/png": [],
-      "image/jpeg": [],
-      "image/jpg": [],
-      "image/webp": [],
-    },
-    multiple: true,
-  });
-
-  const removeImage = (index: number, isExisting: boolean = false) => {
-    if (isExisting) {
-      const newExisting = existingImages.filter((_, i) => i !== index);
-      setExistingImages(newExisting);
-      const newPreviews = imagePreviews.filter((_, i) => i !== index);
-      setImagePreviews(newPreviews);
-    } else {
-      // Find the index in all previews (existing + new)
-      const actualIndex = existingImages.length + index;
-      const newImages = formData.images.filter((_, i) => i !== index);
-      setFormData((prev) => ({ ...prev, images: newImages }));
-      const newPreviews = imagePreviews.filter((_, i) => i !== actualIndex);
-      setImagePreviews(newPreviews);
-    }
-  };
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof ServiceFormData, string>> = {};
@@ -139,7 +104,7 @@ export default function EditServiceForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (field: keyof Omit<ServiceFormData, "images">, value: string | number) => {
+  const handleInputChange = (field: keyof ServiceFormData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error for this field when user starts typing
     if (errors[field]) {
@@ -158,11 +123,7 @@ export default function EditServiceForm() {
 
     // Simulate API call
     setTimeout(() => {
-      console.log("Service updated:", {
-        ...formData,
-        images: formData.images.map((img) => img.name),
-        existingImages: existingImages,
-      });
+      console.log("Service updated:", formData);
       
       // Here you would typically make an API call to update the service
       setIsSubmitting(false);
@@ -232,7 +193,7 @@ export default function EditServiceForm() {
 
           {/* Price */}
           <div>
-            <Label htmlFor="price">Price ($) *</Label>
+            <Label htmlFor="price">Price (RM) *</Label>
             <Input
               id="price"
               name="price"
@@ -248,94 +209,17 @@ export default function EditServiceForm() {
           </div>
         </div>
 
-        {/* Image Upload Section */}
-        <div className="space-y-4">
-          <Label>Service Images (max 10 images)</Label>
-          
-          {/* Existing Images */}
-          {existingImages.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Existing Images:
-              </p>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                {existingImages.map((img, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={img}
-                      alt={`Existing ${index + 1}`}
-                      className="h-32 w-full rounded-lg object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index, true)}
-                      className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-error-500 text-white opacity-0 transition-opacity hover:bg-error-600 group-hover:opacity-100"
-                    >
-                      <TrashBinIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Dropzone */}
-          <div
-            {...getRootProps()}
-            className={`cursor-pointer rounded-xl border-2 border-dashed p-6 transition-colors ${
-              isDragActive
-                ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
-                : "border-gray-300 bg-gray-50 hover:border-brand-400 dark:border-gray-700 dark:bg-gray-900"
-            }`}
-          >
-            <input {...getInputProps()} />
-            <div className="flex flex-col items-center justify-center space-y-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
-                <PlusIcon className="h-6 w-6" />
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {isDragActive ? "Drop images here" : "Drag & drop images here"}
-                </p>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  or click to browse (PNG, JPG, WebP)
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* New Image Previews */}
-          {formData.images.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                New Images:
-              </p>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                {imagePreviews.slice(existingImages.length).map((preview, index) => (
-                  <div key={existingImages.length + index} className="relative group">
-                    <img
-                      src={preview}
-                      alt={`New ${index + 1}`}
-                      className="h-32 w-full rounded-lg object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index, false)}
-                      className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-error-500 text-white opacity-0 transition-opacity hover:bg-error-600 group-hover:opacity-100"
-                    >
-                      <TrashBinIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {imagePreviews.length > 0 && (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {imagePreviews.length} image(s) total
-            </p>
-          )}
+        {/* Description */}
+        <div>
+          <Label htmlFor="description">Description</Label>
+          <TextArea
+            placeholder="Enter service description (optional)"
+            rows={4}
+            value={formData.description}
+            onChange={(value) => handleInputChange("description", value)}
+            error={!!errors.description}
+            hint={errors.description}
+          />
         </div>
 
         {/* Form Actions */}

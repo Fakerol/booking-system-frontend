@@ -24,6 +24,8 @@ export interface Booking {
   date: string;
   time: string;
   status: "confirmed" | "pending" | "cancelled" | "completed";
+  is_free_appointment?: boolean;
+  original_price?: number;
 }
 
 // Generate 50 dummy bookings
@@ -74,6 +76,16 @@ const generateDummyBookings = (): Booking[] => {
     const randomStaffIndex = Math.floor(Math.random() * staffNames.length);
     const randomServiceIndex = Math.floor(Math.random() * services.length);
     
+    // Randomly assign some bookings as free appointments (10% chance)
+    const isFreeAppointment = Math.random() < 0.1;
+    const servicePrices: Record<string, number> = {
+      "Haircut": 25,
+      "Hair Color": 50,
+      "Hair Styling": 35,
+      "Beard Trim": 15,
+      "Shampoo": 20,
+    };
+    
     bookings.push({
       _id: (i + 1).toString(),
       customer_name: customerNames[i % customerNames.length],
@@ -83,6 +95,8 @@ const generateDummyBookings = (): Booking[] => {
       date: dates[randomDateIndex],
       time: times[randomTimeIndex],
       status: statuses[randomStatusIndex],
+      is_free_appointment: isFreeAppointment,
+      original_price: isFreeAppointment ? servicePrices[services[randomServiceIndex]] : undefined,
     });
   }
 
@@ -311,9 +325,16 @@ export default function BookingTable() {
                       className="px-5 py-4 sm:px-6 text-start"
                       onClick={() => handleRowClick(booking)}
                     >
-                      <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                        {booking.customer_name}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                          {booking.customer_name}
+                        </span>
+                        {booking.is_free_appointment && (
+                          <Badge size="sm" color="success">
+                            Free
+                          </Badge>
+                        )}
+                      </div>
                     </td>
                     <td 
                       className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400"

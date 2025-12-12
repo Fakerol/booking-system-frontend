@@ -44,7 +44,7 @@ export default function BookingMetrics() {
               Total Revenue
             </span>
             <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-              $45,678
+              RM 45,678
             </h4>
           </div>
           <Badge color="success">

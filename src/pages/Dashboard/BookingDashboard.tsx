@@ -1,5 +1,6 @@
 import BookingMetrics from "../../components/booking/BookingMetrics";
 import BookingChart from "../../components/booking/BookingChart";
+import TopStaffBookingsChart from "../../components/booking/TopStaffBookingsChart";
 import RecentBookings from "../../components/booking/RecentBookings";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
@@ -16,7 +17,10 @@ export default function BookingDashboard() {
         <div className="col-span-12 space-y-6">
           <BookingMetrics />
 
-          <BookingChart />
+          <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-2">
+            <BookingChart />
+            <TopStaffBookingsChart />
+          </div>
         </div>
 
         <div className="col-span-12">

@@ -9,7 +9,9 @@ import {
   GridIcon,
   GroupIcon,
   HorizontaLDots,
+  PieChartIcon,
   UserIcon,
+  UserCircleIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 
@@ -28,11 +30,6 @@ const navItems: NavItem[] = [
   },
   {
     icon: <CalenderIcon />,
-    name: "Calendar",
-    path: "/calendar",
-  },
-  {
-    icon: <CalenderIcon />,
     name: "Booking",
     path: "/bookings",
   },
@@ -40,6 +37,11 @@ const navItems: NavItem[] = [
     icon: <BoxIcon />,
     name: "Services",
     path: "/services",
+  },
+  {
+    icon: <UserCircleIcon />,
+    name: "Customers",
+    path: "/customers",
   },
   {
     icon: <GroupIcon />,
@@ -50,6 +52,11 @@ const navItems: NavItem[] = [
     icon: <UserIcon />,
     name: "Users",
     path: "/users",
+  },
+  {
+    icon: <PieChartIcon />,
+    name: "Reports",
+    path: "/reports",
   },
 ];
 

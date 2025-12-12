@@ -1,19 +1,18 @@
-import { useState, FormEvent, useCallback } from "react";
+import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router";
-import { useDropzone } from "react-dropzone";
 import ComponentCard from "../common/ComponentCard";
 import Form from "../form/Form";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
+import TextArea from "../form/input/TextArea";
 import Button from "../ui/button/Button";
 import Toast from "../ui/toast/Toast";
-import { PlusIcon, TrashBinIcon } from "../../icons";
 
 interface ServiceFormData {
   name: string;
   duration_minutes: number;
   price: number;
-  images: File[];
+  description: string;
 }
 
 export default function ServiceForm() {
@@ -23,47 +22,12 @@ export default function ServiceForm() {
     name: "",
     duration_minutes: 30,
     price: 0,
-    images: [],
+    description: "",
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof ServiceFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showToast, setShowToast] = useState(false);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    setFormData((prev) => {
-      const newFiles = [...prev.images, ...acceptedFiles].slice(0, 10); // Limit to 10 images
-      return { ...prev, images: newFiles };
-    });
-    
-    // Create previews for new images
-    acceptedFiles.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreviews((prev) => [...prev, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      "image/png": [],
-      "image/jpeg": [],
-      "image/jpg": [],
-      "image/webp": [],
-    },
-    multiple: true,
-  });
-
-  const removeImage = (index: number) => {
-    const newImages = formData.images.filter((_, i) => i !== index);
-    const newPreviews = imagePreviews.filter((_, i) => i !== index);
-    setFormData((prev) => ({ ...prev, images: newImages }));
-    setImagePreviews(newPreviews);
-  };
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof ServiceFormData, string>> = {};
@@ -84,7 +48,7 @@ export default function ServiceForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (field: keyof Omit<ServiceFormData, "images">, value: string | number) => {
+  const handleInputChange = (field: keyof ServiceFormData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error for this field when user starts typing
     if (errors[field]) {
@@ -103,13 +67,9 @@ export default function ServiceForm() {
 
     // Simulate API call
     setTimeout(() => {
-      console.log("Service created:", {
-        ...formData,
-        images: formData.images.map((img) => img.name),
-      });
+      console.log("Service created:", formData);
       
       // Here you would typically make an API call to create the service
-      // You would need to upload images to a server and get URLs back
       setIsSubmitting(false);
       setShowToast(true);
       
@@ -167,7 +127,7 @@ export default function ServiceForm() {
 
           {/* Price */}
           <div>
-            <Label htmlFor="price">Price ($) *</Label>
+            <Label htmlFor="price">Price (RM) *</Label>
             <Input
               id="price"
               name="price"
@@ -183,62 +143,17 @@ export default function ServiceForm() {
           </div>
         </div>
 
-        {/* Image Upload Section */}
-        <div className="space-y-4">
-          <Label>Service Images (max 10 images)</Label>
-          
-          {/* Dropzone */}
-          <div
-            {...getRootProps()}
-            className={`cursor-pointer rounded-xl border-2 border-dashed p-6 transition-colors ${
-              isDragActive
-                ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
-                : "border-gray-300 bg-gray-50 hover:border-brand-400 dark:border-gray-700 dark:bg-gray-900"
-            }`}
-          >
-            <input {...getInputProps()} />
-            <div className="flex flex-col items-center justify-center space-y-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
-                <PlusIcon className="h-6 w-6" />
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {isDragActive ? "Drop images here" : "Drag & drop images here"}
-                </p>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  or click to browse (PNG, JPG, WebP)
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Image Previews */}
-          {imagePreviews.length > 0 && (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {imagePreviews.map((preview, index) => (
-                <div key={index} className="relative group">
-                  <img
-                    src={preview}
-                    alt={`Preview ${index + 1}`}
-                    className="h-32 w-full rounded-lg object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-error-500 text-white opacity-0 transition-opacity hover:bg-error-600 group-hover:opacity-100"
-                  >
-                    <TrashBinIcon className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {formData.images.length > 0 && (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {formData.images.length} image(s) selected
-            </p>
-          )}
+        {/* Description */}
+        <div>
+          <Label htmlFor="description">Description</Label>
+          <TextArea
+            placeholder="Enter service description (optional)"
+            rows={4}
+            value={formData.description}
+            onChange={(value) => handleInputChange("description", value)}
+            error={!!errors.description}
+            hint={errors.description}
+          />
         </div>
 
         {/* Form Actions */}

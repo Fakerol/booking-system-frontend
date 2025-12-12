@@ -12,6 +12,8 @@ interface Booking {
   date: string;
   time: string;
   status: "confirmed" | "pending" | "cancelled" | "completed";
+  is_free_appointment?: boolean;
+  original_price?: number;
 }
 
 interface BookingDetailsModalProps {
@@ -137,6 +139,28 @@ export default function BookingDetailsModal({
               {booking.status}
             </Badge>
           </div>
+
+          {booking.is_free_appointment && (
+            <div className="flex items-center justify-between border-b border-gray-200 pb-3 dark:border-gray-700">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Appointment Type
+              </span>
+              <Badge size="sm" color="success">
+                Free Appointment
+              </Badge>
+            </div>
+          )}
+
+          {booking.original_price !== undefined && booking.is_free_appointment && (
+            <div className="flex items-center justify-between border-b border-gray-200 pb-3 dark:border-gray-700">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Original Price
+              </span>
+              <span className="text-sm text-gray-900 dark:text-white">
+                RM {booking.original_price} (Free)
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">

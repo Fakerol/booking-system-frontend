@@ -72,26 +72,20 @@ export default function ServiceDetailsModal({
               Price
             </span>
             <span className="text-sm text-gray-900 dark:text-white">
-              ${service.price}
+              RM {service.price}
             </span>
           </div>
 
-          <div className="border-b border-gray-200 pb-3 dark:border-gray-700">
-            <span className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Images ({service.images.length})
-            </span>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-              {service.images.map((img, index) => (
-                <div key={index} className="relative">
-                  <img
-                    src={img}
-                    alt={`${service.name} ${index + 1}`}
-                    className="h-32 w-full rounded-lg object-cover"
-                  />
-                </div>
-              ))}
+          {service.description && (
+            <div className="border-b border-gray-200 pb-3 dark:border-gray-700">
+              <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Description
+              </span>
+              <span className="text-sm text-gray-900 dark:text-white">
+                {service.description}
+              </span>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">
