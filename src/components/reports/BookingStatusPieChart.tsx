@@ -114,7 +114,6 @@ export default function BookingStatusPieChart() {
     tooltip: {
       y: {
         formatter: (val: number, { seriesIndex }) => {
-          const total = statusBreakdown.reduce((sum, s) => sum + s.count, 0);
           const count = statusBreakdown[seriesIndex].count;
           return `${count} bookings (${val.toFixed(1)}%)`;
         },

@@ -207,13 +207,11 @@ export default function SignInForm() {
             {/* Dummy Users Info */}
             <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
-                Dummy Users:
+                Dummy User:
               </p>
               <div className="text-xs text-gray-500 dark:text-gray-500 space-y-1">
                 <p>Admin: username: "admin", password: "admin123"</p>
-                <p>Customer: username: "customer", password: "customer123"</p>
-                <p>Ahmad: username: "ahmad", password: "password123"</p>
-                <p>John: username: "john", password: "password123"</p>
+                
               </div>
             </div>
 

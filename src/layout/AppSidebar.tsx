@@ -270,8 +270,8 @@ const AppSidebar: React.FC = () => {
       >
         <Link to="/" className="flex items-center gap-3">
           <img
-            src="/images/logo/logo-icon.svg"
-            alt="JustBook Logo"
+            src="/images/logo/rps-logo.png"
+            alt="Logo"
             width={32}
             height={32}
           />

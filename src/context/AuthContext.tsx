@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
-  const signup = async (username: string, password: string): Promise<boolean> => {
+  const signup = async (username: string, _password: string): Promise<boolean> => {
     // Simulate API call delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 

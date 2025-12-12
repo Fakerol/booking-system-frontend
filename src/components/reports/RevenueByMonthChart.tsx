@@ -104,7 +104,6 @@ export default function RevenueByMonthChart() {
 
     for (let i = 11; i >= 0; i--) {
       const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const monthStr = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
       const monthBookings = bookingData.filter((b) => {
         const bookingDate = new Date(b.date);

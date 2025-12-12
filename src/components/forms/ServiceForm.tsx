@@ -138,7 +138,7 @@ export default function ServiceForm() {
               error={!!errors.price}
               hint={errors.price}
               min="0"
-              step="0.01"
+              step={0.01}
             />
           </div>
         </div>
