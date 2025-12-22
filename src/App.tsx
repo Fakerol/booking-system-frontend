@@ -33,14 +33,17 @@ import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import BookingDashboard from "./pages/Dashboard/BookingDashboard";
 import Reports from "./pages/Reports/Reports";
+import CorporationSetup from "./pages/CorporationSetup";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import CorporationSetupModal from "./components/modals/CorporationSetupModal";
 
 export default function App() {
   return (
     <>
       <AuthProvider>
         <Router>
+          <CorporationSetupModal />
           <ScrollToTop />
           <Routes>
           {/* Dashboard Layout - Protected Routes */}
@@ -89,6 +92,9 @@ export default function App() {
             {/* Charts */}
             <Route path="/line-chart" element={<LineChart />} />
             <Route path="/bar-chart" element={<BarChart />} />
+
+            {/* Corporation Setup */}
+            <Route path="/corporation-setup" element={<CorporationSetup />} />
           </Route>
 
           {/* Auth Layout */}

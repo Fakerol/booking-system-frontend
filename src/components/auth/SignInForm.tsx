@@ -13,7 +13,7 @@ export default function SignInForm() {
   const { login, isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -30,8 +30,8 @@ export default function SignInForm() {
     e.preventDefault();
     setError("");
 
-    if (!username.trim()) {
-      setError("Username is required");
+    if (!email.trim()) {
+      setError("Email is required");
       return;
     }
 
@@ -42,17 +42,31 @@ export default function SignInForm() {
 
     setIsLoading(true);
 
-    const success = await login(username.trim(), password);
+    try {
+      const result = await login(email.trim(), password);
 
-    setIsLoading(false);
-
-    if (success) {
-      setShowToast(true);
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 500);
-    } else {
-      setError("Invalid username or password");
+      if (result.success) {
+        setShowToast(true);
+        
+        // Check if corporation setup is needed
+        if (result.needsCorporationSetup === false) {
+          // Redirect to dashboard if corporation setup is not needed
+          setTimeout(() => {
+            navigate("/dashboard");
+          }, 500);
+        } else {
+          // Redirect to corporation setup page if needed
+          setTimeout(() => {
+            navigate("/corporation-setup");
+          }, 500);
+        }
+      } else {
+        setError("Invalid credentials");
+      }
+    } catch (err) {
+      setError("Network error. Please check your connection and try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -140,13 +154,13 @@ export default function SignInForm() {
               <div className="space-y-6">
                 <div>
                   <Label>
-                    Username <span className="text-error-500">*</span>{" "}
+                    Email <span className="text-error-500">*</span>{" "}
                   </Label>
                   <Input 
-                    placeholder="admin or customer" 
-                    value={username}
+                    placeholder="ahmad@gmail.com" 
+                    value={email}
                     onChange={(e) => {
-                      setUsername(e.target.value);
+                      setEmail(e.target.value);
                       setError("");
                     }}
                     error={!!error}
@@ -197,23 +211,12 @@ export default function SignInForm() {
                   </Link>
                 </div>
                 <div>
-                  <Button className="w-full" size="sm" disabled={isLoading}>
+                  <Button type="submit" className="w-full" size="sm" disabled={isLoading}>
                     {isLoading ? "Signing in..." : "Sign in"}
                   </Button>
                 </div>
               </div>
             </form>
-
-            {/* Dummy Users Info */}
-            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
-                Dummy User:
-              </p>
-              <div className="text-xs text-gray-500 dark:text-gray-500 space-y-1">
-                <p>Admin: username: "admin", password: "admin123"</p>
-                
-              </div>
-            </div>
 
             <div className="mt-5">
               <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">

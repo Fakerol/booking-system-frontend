@@ -6,16 +6,20 @@ import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
 import Toast from "../ui/toast/Toast";
 import { useAuth } from "../../context/AuthContext";
+import { registerUser } from "../../services/api";
 
 export default function SignUpForm() {
   const navigate = useNavigate();
-  const { signup, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
-  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [generalError, setGeneralError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
@@ -28,59 +32,90 @@ export default function SignUpForm() {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError("");
+    setFieldErrors({});
+    setGeneralError("");
 
-    if (!username.trim()) {
-      setError("Username is required");
+    // Client side validation
+    if (!name.trim()) {
+      setFieldErrors({ name: "Name is required" });
       return;
     }
 
-    if (username.length < 3) {
-      setError("Username must be at least 3 characters");
+    if (!email.trim()) {
+      setFieldErrors({ email: "Email is required" });
+      return;
+    }
+
+    const emailRegex = /^\S+@\S+\.\S+$/;
+    if (!emailRegex.test(email)) {
+      setFieldErrors({ email: "Please enter a valid email address" });
       return;
     }
 
     if (!password) {
-      setError("Password is required");
+      setFieldErrors({ password: "Password is required" });
       return;
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+      setFieldErrors({ password: "Password must be at least 6 characters" });
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setFieldErrors({ password: "Passwords do not match" });
       return;
     }
 
     if (!isChecked) {
-      setError("You must agree to the Terms and Conditions");
+      setGeneralError("You must agree to the Terms and Conditions");
       return;
     }
 
     setIsLoading(true);
 
-    // Simulate signup - in real app, this would call an API
-    const success = await signup(username.trim(), password);
+    try {
+      const response = await registerUser({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone || null,
+        password,
+        password_confirmation: confirmPassword,
+      });
 
-    setIsLoading(false);
-
-    if (success) {
-      setShowToast(true);
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 500);
-    } else {
-      setError("Username already exists. Please choose a different username.");
+      if (response.success) {
+        setShowToast(true);
+        // Show server message briefly then redirect to sign in
+        setTimeout(() => {
+          navigate("/signin");
+        }, 2000);
+      } else {
+        // Map server validation errors to fieldErrors
+        if (response.errors && typeof response.errors === "object") {
+          const mapped: Record<string, string> = {};
+          Object.keys(response.errors).forEach((k) => {
+            if (Array.isArray(response.errors![k]) && response.errors![k].length > 0) {
+              mapped[k] = response.errors![k][0];
+            }
+          });
+          setFieldErrors(mapped);
+        } else if (response.message) {
+          setGeneralError(response.message);
+        } else {
+          setGeneralError("An unexpected error occurred. Please try again.");
+        }
+      }
+    } catch (err) {
+      setGeneralError("Network error. Please check your connection and try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <>
       <Toast
-        message="Signup successful! Welcome!"
+        message="Registration successful! Please check your email to verify your account."
         isVisible={showToast}
         onClose={() => setShowToast(false)}
       />
@@ -159,25 +194,85 @@ export default function SignUpForm() {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="space-y-5">
-                {/* <!-- Username --> */}
+                {/* Name */}
                 <div>
                   <Label>
-                    Username<span className="text-error-500">*</span>
+                    Name<span className="text-error-500">*</span>
                   </Label>
                   <Input
                     type="text"
-                    id="username"
-                    name="username"
-                    placeholder="Enter your username"
-                    value={username}
+                    id="name"
+                    name="name"
+                    placeholder="Enter your full name"
+                    value={name}
                     onChange={(e) => {
-                      setUsername(e.target.value);
-                      setError("");
+                      setName(e.target.value);
+                      setFieldErrors((s) => {
+                        const copy = { ...s };
+                        delete (copy as any).name;
+                        return copy;
+                      });
+                      setGeneralError("");
                     }}
-                    error={!!error && error.includes("username")}
+                    error={!!fieldErrors.name}
                   />
+                  {fieldErrors.name && (
+                    <p className="text-xs text-error-500">{fieldErrors.name}</p>
+                  )}
                 </div>
-                {/* <!-- Password --> */}
+
+                {/* Email */}
+                <div>
+                  <Label>
+                    Email<span className="text-error-500">*</span>
+                  </Label>
+                  <Input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setFieldErrors((s) => {
+                        const copy = { ...s };
+                        delete (copy as any).email;
+                        return copy;
+                      });
+                      setGeneralError("");
+                    }}
+                    error={!!fieldErrors.email}
+                  />
+                  {fieldErrors.email && (
+                    <p className="text-xs text-error-500">{fieldErrors.email}</p>
+                  )}
+                </div>
+
+                {/* Phone (optional) */}
+                <div>
+                  <Label>Phone</Label>
+                  <Input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    placeholder="Optional"
+                    value={phone ?? ""}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      setFieldErrors((s) => {
+                        const copy = { ...s };
+                        delete (copy as any).phone;
+                        return copy;
+                      });
+                    }}
+                    error={!!fieldErrors.phone}
+                  />
+                  {fieldErrors.phone && (
+                    <p className="text-xs text-error-500">{fieldErrors.phone}</p>
+                  )}
+                </div>
+
+                {/* Password */}
                 <div>
                   <Label>
                     Password<span className="text-error-500">*</span>
@@ -189,9 +284,14 @@ export default function SignUpForm() {
                       value={password}
                       onChange={(e) => {
                         setPassword(e.target.value);
-                        setError("");
+                        setFieldErrors((s) => {
+                          const copy = { ...s };
+                          delete (copy as any).password;
+                          return copy;
+                        });
+                        setGeneralError("");
                       }}
-                      error={!!error && error.includes("password")}
+                      error={!!fieldErrors.password}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -205,7 +305,8 @@ export default function SignUpForm() {
                     </span>
                   </div>
                 </div>
-                {/* <!-- Confirm Password --> */}
+
+                {/* Confirm Password */}
                 <div>
                   <Label>
                     Confirm Password<span className="text-error-500">*</span>
@@ -217,14 +318,20 @@ export default function SignUpForm() {
                       value={confirmPassword}
                       onChange={(e) => {
                         setConfirmPassword(e.target.value);
-                        setError("");
+                        setFieldErrors((s) => {
+                          const copy = { ...s };
+                          delete (copy as any).password;
+                          return copy;
+                        });
+                        setGeneralError("");
                       }}
-                      error={!!error && error.includes("match")}
+                      error={!!fieldErrors.password}
                     />
                   </div>
                 </div>
-                {error && (
-                  <p className="text-xs text-error-500">{error}</p>
+
+                {generalError && (
+                  <p className="text-xs text-error-500">{generalError}</p>
                 )}
                 {/* <!-- Checkbox --> */}
                 <div className="flex items-center gap-3">
