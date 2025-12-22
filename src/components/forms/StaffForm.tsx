@@ -6,93 +6,73 @@ import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Button from "../ui/button/Button";
 import Toast from "../ui/toast/Toast";
+import { createStaff } from "../../services/staff";
 
 interface StaffFormData {
   name: string;
-  available_days: string[];
-  start_time: string;
-  end_time: string;
+  phone: string;
+  email: string;
+  position: string;
+  is_active: boolean;
 }
-
-const dayOptions = [
-  { value: "mon", label: "Monday" },
-  { value: "tue", label: "Tuesday" },
-  { value: "wed", label: "Wednesday" },
-  { value: "thu", label: "Thursday" },
-  { value: "fri", label: "Friday" },
-  { value: "sat", label: "Saturday" },
-  { value: "sun", label: "Sunday" },
-];
 
 export default function StaffForm() {
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState<StaffFormData>({
     name: "",
-    available_days: [],
-    start_time: "09:00",
-    end_time: "18:00",
+    phone: "",
+    email: "",
+    position: "",
+    is_active: true,
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof StaffFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof StaffFormData, string>> = {};
 
+    // Name is required (max 255 characters)
     if (!formData.name.trim()) {
-      newErrors.name = "Staff name is required";
+      newErrors.name = "Name is required";
+    } else if (formData.name.length > 255) {
+      newErrors.name = "Name must be less than 255 characters";
     }
 
-    if (formData.available_days.length === 0) {
-      newErrors.available_days = "Please select at least one available day";
+    // Phone is optional, but if provided, validate format
+    if (formData.phone.trim() && !/^\+?[\d\s-()]+$/.test(formData.phone)) {
+      newErrors.phone = "Please enter a valid phone number";
+    } else if (formData.phone.length > 20) {
+      newErrors.phone = "Phone number must be less than 20 characters";
     }
 
-    if (!formData.start_time) {
-      newErrors.start_time = "Start time is required";
+    // Email is optional, but if provided, validate format
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
     }
 
-    if (!formData.end_time) {
-      newErrors.end_time = "End time is required";
-    }
-
-    // Validate that end time is after start time
-    if (formData.start_time && formData.end_time) {
-      const start = new Date(`2000-01-01T${formData.start_time}`);
-      const end = new Date(`2000-01-01T${formData.end_time}`);
-      if (end <= start) {
-        newErrors.end_time = "End time must be after start time";
-      }
+    // Position is optional, but if provided, validate length
+    if (formData.position.trim() && formData.position.length > 255) {
+      newErrors.position = "Position must be less than 255 characters";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (field: keyof Omit<StaffFormData, "available_days">, value: string) => {
+  const handleInputChange = (field: keyof StaffFormData, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error for this field when user starts typing
-    if (errors[field]) {
+    if (errors[field as keyof typeof errors]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
 
-  const handleDayToggle = (day: string) => {
-    setFormData((prev) => {
-      const isSelected = prev.available_days.includes(day);
-      const newDays = isSelected
-        ? prev.available_days.filter((d) => d !== day)
-        : [...prev.available_days, day].sort();
-      return { ...prev, available_days: newDays };
-    });
-    // Clear error when day is selected
-    if (errors.available_days) {
-      setErrors((prev) => ({ ...prev, available_days: undefined }));
-    }
-  };
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -101,19 +81,76 @@ export default function StaffForm() {
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Staff created:", formData);
-      
-      // Here you would typically make an API call to create the staff
-      setIsSubmitting(false);
+    try {
+      // Prepare payload - only include fields that have values
+      const payload: {
+        name: string;
+        phone?: string;
+        email?: string;
+        position?: string;
+        is_active?: boolean;
+      } = {
+        name: formData.name.trim(),
+      };
+
+      // Add optional fields only if they have values
+      if (formData.phone.trim()) {
+        payload.phone = formData.phone.trim();
+      }
+      if (formData.email.trim()) {
+        payload.email = formData.email.trim();
+      }
+      if (formData.position.trim()) {
+        payload.position = formData.position.trim();
+      }
+      if (formData.is_active !== undefined) {
+        payload.is_active = formData.is_active;
+      }
+
+      const response = await createStaff(payload);
+
+      if (response.success && response.data) {
+        setToastMessage("Staff created successfully!");
+        setToastType("success");
+        setShowToast(true);
+        
+        // Navigate after showing toast
+        setTimeout(() => {
+          navigate("/staff");
+        }, 2000);
+      } else {
+        // Handle API errors - response is ApiError type
+        const errorResponse = response as { success: false; message: string; errors?: Record<string, string[]> };
+        let errorMessage = errorResponse.message || "Failed to create staff";
+        
+        // Check if there are field-specific errors
+        if (errorResponse.errors) {
+          const fieldErrors = Object.entries(errorResponse.errors)
+            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(", ") : messages}`)
+            .join("; ");
+          errorMessage = fieldErrors || errorMessage;
+        }
+
+        setErrors({
+          ...errors,
+          name: errorResponse.errors?.name?.[0] || undefined,
+          email: errorResponse.errors?.email?.[0] || undefined,
+          phone: errorResponse.errors?.phone?.[0] || undefined,
+          position: errorResponse.errors?.position?.[0] || undefined,
+        });
+
+        setToastMessage(errorMessage);
+        setToastType("error");
+        setShowToast(true);
+        setIsSubmitting(false);
+      }
+    } catch (error) {
+      console.error("Error creating staff:", error);
+      setToastMessage("An unexpected error occurred. Please try again.");
+      setToastType("error");
       setShowToast(true);
-      
-      // Navigate after showing toast
-      setTimeout(() => {
-        navigate("/staff");
-      }, 3100);
-    }, 1000);
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -123,9 +160,10 @@ export default function StaffForm() {
   return (
     <>
       <Toast
-        message="Staff created successfully!"
+        message={toastMessage}
         isVisible={showToast}
         onClose={() => setShowToast(false)}
+        type={toastType}
       />
       <ComponentCard title="Create New Staff">
         <Form onSubmit={handleSubmit} className="space-y-6">
@@ -145,59 +183,68 @@ export default function StaffForm() {
             />
           </div>
 
-          {/* Start Time */}
+          {/* Phone */}
           <div>
-            <Label htmlFor="start_time">Start Time *</Label>
+            <Label htmlFor="phone">Phone</Label>
             <Input
-              id="start_time"
-              name="start_time"
-              type="time"
-              value={formData.start_time}
-              onChange={(e) => handleInputChange("start_time", e.target.value)}
-              error={!!errors.start_time}
-              hint={errors.start_time}
+              id="phone"
+              name="phone"
+              type="text"
+              placeholder="Enter phone number"
+              value={formData.phone}
+              onChange={(e) => handleInputChange("phone", e.target.value)}
+              error={!!errors.phone}
+              hint={errors.phone}
             />
           </div>
 
-          {/* End Time */}
+          {/* Email */}
           <div>
-            <Label htmlFor="end_time">End Time *</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="end_time"
-              name="end_time"
-              type="time"
-              value={formData.end_time}
-              onChange={(e) => handleInputChange("end_time", e.target.value)}
-              error={!!errors.end_time}
-              hint={errors.end_time}
+              id="email"
+              name="email"
+              type="email"
+              placeholder="Enter email address"
+              value={formData.email}
+              onChange={(e) => handleInputChange("email", e.target.value)}
+              error={!!errors.email}
+              hint={errors.email}
             />
           </div>
-        </div>
 
-        {/* Available Days */}
-        <div>
-          <Label>Available Days *</Label>
-          <div className="mt-2 space-y-2">
-            {dayOptions.map((day) => (
-              <label
-                key={day.value}
-                className="flex items-center space-x-3 cursor-pointer"
-              >
+          {/* Position */}
+          <div>
+            <Label htmlFor="position">Position</Label>
+            <Input
+              id="position"
+              name="position"
+              type="text"
+              placeholder="Enter position"
+              value={formData.position}
+              onChange={(e) => handleInputChange("position", e.target.value)}
+              error={!!errors.position}
+              hint={errors.position}
+            />
+          </div>
+
+          {/* Active Status */}
+          <div>
+            <Label htmlFor="is_active">Status</Label>
+            <div className="mt-2">
+              <label className="flex items-center space-x-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={formData.available_days.includes(day.value)}
-                  onChange={() => handleDayToggle(day.value)}
+                  checked={formData.is_active}
+                  onChange={(e) => handleInputChange("is_active", e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">
-                  {day.label}
+                  Active
                 </span>
               </label>
-            ))}
+            </div>
           </div>
-          {errors.available_days && (
-            <p className="mt-1.5 text-xs text-error-500">{errors.available_days}</p>
-          )}
         </div>
 
         {/* Form Actions */}

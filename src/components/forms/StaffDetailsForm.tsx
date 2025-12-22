@@ -6,46 +6,39 @@ import Input from "../form/input/InputField";
 import Button from "../ui/button/Button";
 import Badge from "../ui/badge/Badge";
 import { PencilIcon, TrashBinIcon } from "../../icons";
-import { Staff } from "../tables/Staff/StaffTable";
 import Toast from "../ui/toast/Toast";
-
-const dayLabels: Record<string, string> = {
-  mon: "Monday",
-  tue: "Tuesday",
-  wed: "Wednesday",
-  thu: "Thursday",
-  fri: "Friday",
-  sat: "Saturday",
-  sun: "Sunday",
-};
-
-import { staffData } from "../tables/Staff/StaffTable";
-
-// Mock function to fetch staff by ID
-const fetchStaffById = (id: string): Staff | null => {
-  return staffData.find((s: Staff) => s._id === id) || null;
-};
+import { getStaffById, deleteStaff, StaffData } from "../../services/staff";
 
 export default function StaffDetailsForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   
-  const [staff, setStaff] = useState<Staff | null>(null);
+  const [staff, setStaff] = useState<StaffData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
 
   useEffect(() => {
-    if (id) {
-      const foundStaff = fetchStaffById(id);
-      if (foundStaff) {
-        setStaff(foundStaff);
-      } else {
-        setError("Staff not found");
+    const fetchStaff = async () => {
+      if (id) {
+        setIsLoading(true);
+        setError(null);
+        
+        const response = await getStaffById(id);
+        
+        if (response.success && response.data) {
+          setStaff(response.data.staff);
+        } else {
+          setError(response.message || "Staff not found");
+        }
+        
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    }
+    };
+
+    fetchStaff();
   }, [id]);
 
   const handleEdit = () => {
@@ -54,13 +47,33 @@ export default function StaffDetailsForm() {
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
+    if (!id) {
+      return;
+    }
+
     if (window.confirm("Are you sure you want to delete this staff member?")) {
-      setToastMessage("Staff deleted successfully!");
-      setShowToast(true);
-      setTimeout(() => {
-        navigate("/staff");
-      }, 2000);
+      try {
+        const response = await deleteStaff(id);
+        
+        if (response.success) {
+          setToastMessage(response.message || "Staff deleted successfully!");
+          setToastType("success");
+          setShowToast(true);
+          setTimeout(() => {
+            navigate("/staff");
+          }, 2000);
+        } else {
+          setToastMessage(response.message || "Failed to delete staff");
+          setToastType("error");
+          setShowToast(true);
+        }
+      } catch (error) {
+        console.error("Error deleting staff:", error);
+        setToastMessage("An unexpected error occurred. Please try again.");
+        setToastType("error");
+        setShowToast(true);
+      }
     }
   };
 
@@ -97,6 +110,7 @@ export default function StaffDetailsForm() {
         message={toastMessage}
         isVisible={showToast}
         onClose={() => setShowToast(false)}
+        type={toastType}
       />
       <ComponentCard title="Staff Details">
         <div className="space-y-6">
@@ -123,25 +137,50 @@ export default function StaffDetailsForm() {
             </div>
 
             <div>
-              <Label htmlFor="working_hours">Working Hours</Label>
+              <Label htmlFor="phone">Phone</Label>
               <Input
-                id="working_hours"
-                name="working_hours"
+                id="phone"
+                name="phone"
                 type="text"
-                value={`${staff.start_time} - ${staff.end_time}`}
+                value={staff.phone}
                 readOnly
                 className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
               />
             </div>
 
-            <div className="md:col-span-2">
-              <Label htmlFor="available_days">Available Days ({staff.available_days.length})</Label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {staff.available_days.map((day) => (
-                  <Badge key={day} size="sm" color="info">
-                    {dayLabels[day]}
-                  </Badge>
-                ))}
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={staff.email}
+                readOnly
+                className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="position">Position</Label>
+              <Input
+                id="position"
+                name="position"
+                type="text"
+                value={staff.position}
+                readOnly
+                className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <div className="mt-2">
+                <Badge 
+                  size="sm" 
+                  color={staff.status_label.toLowerCase() === "active" ? "success" : "error"}
+                >
+                  {staff.status_label}
+                </Badge>
               </div>
             </div>
           </div>

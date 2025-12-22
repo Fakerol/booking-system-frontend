@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   Table,
@@ -12,98 +12,74 @@ import Input from "../../form/input/InputField";
 import Select from "../../form/Select";
 import Badge from "../../ui/badge/Badge";
 import { ChevronLeftIcon, AngleRightIcon } from "../../../icons";
-import Toast from "../../ui/toast/Toast";
+import { getStaffs, StaffData, GetStaffsParams } from "../../../services/staff";
 
-export interface Staff {
-  _id: string;
-  name: string;
-  available_days: string[];
-  start_time: string;
-  end_time: string;
-}
-
-// Generate 20 dummy staff members
-const generateDummyStaff = (): Staff[] => {
-  const names = [
-    "Ahmad", "Sarah", "Mike", "Emma", "David", "Lisa", "John", "Maria",
-    "Tom", "Anna", "James", "Sophia", "Robert", "Olivia", "William", "Grace",
-    "Daniel", "Emily", "Matthew", "Charlotte"
-  ];
-
-  const allDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-  const startTimes = ["09:00", "10:00", "11:00", "08:00"];
-  const endTimes = ["17:00", "18:00", "19:00", "20:00"];
-
-  const staff: Staff[] = [];
-  
-  for (let i = 0; i < 20; i++) {
-    const dayCount = Math.floor(Math.random() * 5) + 3; // 3-7 days
-    const availableDays = allDays
-      .sort(() => Math.random() - 0.5)
-      .slice(0, dayCount)
-      .sort();
-    
-    const startTimeIndex = Math.floor(Math.random() * startTimes.length);
-    const endTimeIndex = Math.floor(Math.random() * endTimes.length);
-    
-    staff.push({
-      _id: (i + 1).toString(),
-      name: names[i % names.length],
-      available_days: availableDays,
-      start_time: startTimes[startTimeIndex],
-      end_time: endTimes[endTimeIndex],
-    });
-  }
-
-  return staff;
-};
-
-export const staffData: Staff[] = generateDummyStaff();
-
-const ITEMS_PER_PAGE = 20;
-
-const dayLabels: Record<string, string> = {
-  mon: "Mon",
-  tue: "Tue",
-  wed: "Wed",
-  thu: "Thu",
-  fri: "Fri",
-  sat: "Sat",
-  sun: "Sun",
-};
+const ITEMS_PER_PAGE = 15;
 
 export default function StaffTable() {
   const navigate = useNavigate();
+  const [staffs, setStaffs] = useState<StaffData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [dayFilter, setDayFilter] = useState("");
-  const [showToast, setShowToast] = useState(false);
+  const [isActiveFilter, setIsActiveFilter] = useState<string>("");
+  const [positionFilter, setPositionFilter] = useState("");
 
-  // Filter staff based on search and filters
-  const filteredStaff = useMemo(() => {
-    return staffData.filter((staff) => {
-      const matchesSearch =
-        searchTerm === "" ||
-        staff.name.toLowerCase().includes(searchTerm.toLowerCase());
+  // Debounce search term
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
-      const matchesDay =
-        dayFilter === "" ||
-        staff.available_days.includes(dayFilter);
-
-      return matchesSearch && matchesDay;
-    });
-  }, [searchTerm, dayFilter]);
-
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredStaff.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedStaff = filteredStaff.slice(startIndex, endIndex);
-
-  // Reset to page 1 when filters change
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, dayFilter]);
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch staffs when filters or page change
+  useEffect(() => {
+    fetchStaffs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, isActiveFilter, positionFilter, debouncedSearchTerm]);
+
+  const fetchStaffs = async () => {
+    setLoading(true);
+    setError(null);
+
+    const params: GetStaffsParams = {
+      per_page: ITEMS_PER_PAGE,
+      page: currentPage,
+    };
+
+    if (debouncedSearchTerm.trim()) {
+      params.search = debouncedSearchTerm.trim();
+    }
+
+    if (isActiveFilter !== "") {
+      params.is_active = isActiveFilter === "true" ? true : isActiveFilter === "false" ? false : isActiveFilter;
+    }
+
+    if (positionFilter) {
+      params.position = positionFilter;
+    }
+
+    const response = await getStaffs(params);
+
+    if (response.success && response.data) {
+      setStaffs(response.data.staffs);
+      setTotalPages(response.data.pagination.last_page);
+      setTotal(response.data.pagination.total);
+    } else {
+      setError(response.message || "Failed to fetch staff");
+      setStaffs([]);
+    }
+
+    setLoading(false);
+  };
 
   const handlePrevious = () => {
     if (currentPage > 1) {
@@ -121,37 +97,26 @@ export default function StaffTable() {
     setCurrentPage(page);
   };
 
-  const handleRowClick = (staff: Staff) => {
-    navigate(`/staff/${staff._id}`);
+  const handleRowClick = (staff: StaffData) => {
+    navigate(`/staff/${staff.id}`);
   };
 
-  const handleEdit = (staffId: string) => {
-    navigate(`/staff/edit/${staffId}`);
+  const getStatusBadgeColor = (statusLabel: string) => {
+    if (statusLabel.toLowerCase() === "active") {
+      return "success";
+    }
+    return "error";
   };
 
-  const handleDelete = (staffId: string) => {
-    // In a real app, this would call an API to delete the staff
-    console.log("Delete staff:", staffId);
-    // For now, we'll just log it since we're using dummy data
-    setShowToast(true);
-    // In a real app, you would make an API call here
-    // After successful deletion, show the toast
-  };
-
-  // Get unique days for filter
-  const uniqueDays = useMemo(() => {
-    const daySet = new Set<string>();
-    staffData.forEach((staff) => {
-      staff.available_days.forEach((day) => daySet.add(day));
-    });
-    return Array.from(daySet).sort();
-  }, []);
+  // Calculate display range
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + staffs.length, total);
 
   return (
     <div className="space-y-4">
       {/* Filter Controls */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/[0.05] dark:bg-white/[0.03]">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {/* Search Input */}
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -159,28 +124,45 @@ export default function StaffTable() {
             </label>
             <Input
               type="text"
-              placeholder="Search by staff name..."
+              placeholder="Search by name, email, phone, or position..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          {/* Day Filter */}
+          {/* Status Filter */}
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Available Day
+              Status
             </label>
             <Select
-              placeholder="All Days"
+              placeholder="All Status"
               options={[
-                { value: "", label: "All Days" },
-                ...uniqueDays.map((day) => ({
-                  value: day,
-                  label: dayLabels[day],
-                })),
+                { value: "", label: "All Status" },
+                { value: "true", label: "Active" },
+                { value: "false", label: "Inactive" },
               ]}
               defaultValue=""
-              onChange={(value) => setDayFilter(value)}
+              onChange={(value) => {
+                setIsActiveFilter(value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+
+          {/* Position Filter */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Position
+            </label>
+            <Input
+              type="text"
+              placeholder="Filter by position..."
+              value={positionFilter}
+              onChange={(e) => {
+                setPositionFilter(e.target.value);
+                setCurrentPage(1);
+              }}
             />
           </div>
         </div>
@@ -197,29 +179,59 @@ export default function StaffTable() {
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Staff Name
+                  Name
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Available Days
+                  Phone
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Working Hours
+                  Email
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Position
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Status
                 </TableCell>
               </TableRow>
             </TableHeader>
 
             {/* Table Body */}
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-              {paginatedStaff.length > 0 ? (
-                paginatedStaff.map((staff) => (
+              {loading ? (
+                <TableRow>
+                  <td
+                    colSpan={5}
+                    className="px-5 py-8 text-center text-gray-500 dark:text-gray-400"
+                  >
+                    Loading staff data...
+                  </td>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <td
+                    colSpan={5}
+                    className="px-5 py-8 text-center text-red-500 dark:text-red-400"
+                  >
+                    {error}
+                  </td>
+                </TableRow>
+              ) : staffs.length > 0 ? (
+                staffs.map((staff) => (
                   <TableRow 
-                    key={staff._id}
+                    key={staff.id}
                     className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
                     <td 
@@ -231,29 +243,40 @@ export default function StaffTable() {
                       </span>
                     </td>
                     <td 
-                      className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400"
+                      className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400"
                       onClick={() => handleRowClick(staff)}
                     >
-                      <div className="flex flex-wrap gap-1">
-                        {staff.available_days.map((day) => (
-                          <Badge key={day} size="sm" color="info">
-                            {dayLabels[day]}
-                          </Badge>
-                        ))}
-                      </div>
+                      {staff.phone}
                     </td>
                     <td 
-                      className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400"
+                      className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400"
                       onClick={() => handleRowClick(staff)}
                     >
-                      {staff.start_time} - {staff.end_time}
+                      {staff.email}
+                    </td>
+                    <td 
+                      className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400"
+                      onClick={() => handleRowClick(staff)}
+                    >
+                      {staff.position}
+                    </td>
+                    <td 
+                      className="px-5 py-4 text-start"
+                      onClick={() => handleRowClick(staff)}
+                    >
+                      <Badge 
+                        size="sm" 
+                        color={getStatusBadgeColor(staff.status_label)}
+                      >
+                        {staff.status_label}
+                      </Badge>
                     </td>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
                   <td
-                    colSpan={3}
+                    colSpan={5}
                     className="px-5 py-8 text-center text-gray-500 dark:text-gray-400"
                   >
                     No staff found matching your filters.
@@ -266,14 +289,14 @@ export default function StaffTable() {
       </div>
 
       {/* Pagination */}
-      {totalPages > 0 && (
+      {totalPages > 0 && !loading && (
         <div className="flex flex-col items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-white/[0.05] dark:bg-white/[0.03] sm:flex-row">
           <div className="text-sm text-gray-700 dark:text-gray-300">
             Showing{" "}
             <span className="font-medium">
-              {startIndex + 1} to {Math.min(endIndex, filteredStaff.length)}
+              {startIndex + 1} to {endIndex}
             </span>{" "}
-            of <span className="font-medium">{filteredStaff.length}</span>{" "}
+            of <span className="font-medium">{total}</span>{" "}
             results
           </div>
 
@@ -337,13 +360,6 @@ export default function StaffTable() {
           </div>
         </div>
       )}
-
-      {/* Success Toast */}
-      <Toast
-        message="Staff deleted successfully!"
-        isVisible={showToast}
-        onClose={() => setShowToast(false)}
-      />
     </div>
   );
 }
