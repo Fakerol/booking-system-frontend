@@ -180,10 +180,10 @@ export default function CorporationSetupModal() {
         <div className="relative w-full h-full flex flex-col p-6 bg-white rounded-3xl dark:bg-gray-900 lg:p-8">
           <div className="mb-6">
             <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-              Corporation Setup Required
+              Barbershop Registration
             </h4>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Please complete your corporation setup to continue using the system.
+              Please complete your barbershop setup to continue using the system.
             </p>
           </div>
 
@@ -233,7 +233,7 @@ export default function CorporationSetupModal() {
                   {/* Corporation Name */}
                   <div className="col-span-2">
                     <Label htmlFor="name">
-                      Corporation Name <span className="text-error-500">*</span>
+                      Barbershop Name <span className="text-error-500">*</span>
                     </Label>
                     <Input
                       id="name"
