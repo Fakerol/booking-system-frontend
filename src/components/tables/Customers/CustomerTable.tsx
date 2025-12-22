@@ -124,43 +124,49 @@ export default function CustomerTable() {
       {/* Table */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
         <div className="max-w-full overflow-x-auto">
-          <Table>
+          <Table className="w-full border-collapse">
             {/* Table Header */}
-            <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-              <TableRow>
+            <TableHeader>
+              <TableRow className="bg-gray-50 dark:bg-gray-800/50">
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-center dark:border-gray-700 dark:text-gray-300"
+                >
+                  #
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Name
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Email
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Phone
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Completed Bookings
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Loyalty Program
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="border-b border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Status
                 </TableCell>
@@ -168,12 +174,12 @@ export default function CustomerTable() {
             </TableHeader>
 
             {/* Table Body */}
-            <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+            <TableBody>
               {loading ? (
                 <TableRow>
                   <td
-                    colSpan={6}
-                    className="px-5 py-8 text-center text-gray-500 dark:text-gray-400"
+                    colSpan={7}
+                    className="border-b border-gray-200 px-3 py-4 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
                   >
                     Loading customers...
                   </td>
@@ -182,45 +188,54 @@ export default function CustomerTable() {
                 <TableRow>
                   <td
                     colSpan={6}
-                    className="px-5 py-8 text-center text-red-500 dark:text-red-400"
+                    className="border-b border-gray-200 px-3 py-4 text-center text-sm text-red-500 dark:border-gray-700 dark:text-red-400"
                   >
                     {error}
                   </td>
                 </TableRow>
               ) : customers.length > 0 ? (
-                customers.map((customer) => (
+                customers.map((customer, index) => (
                   <TableRow 
                     key={customer.id}
-                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    className={`cursor-pointer border-b border-gray-200 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/50 ${
+                      index % 2 === 0 
+                        ? "bg-white dark:bg-white/[0.02]" 
+                        : "bg-gray-50/50 dark:bg-gray-800/30"
+                    }`}
                   >
                     <td 
-                      className="px-5 py-4 sm:px-6 text-start"
+                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-center dark:border-gray-700 dark:text-gray-400"
+                    >
+                      {((pagination.current_page - 1) * pagination.per_page) + index + 1}
+                    </td>
+                    <td 
+                      className="border-r border-gray-200 px-3 py-3 text-start dark:border-gray-700"
                       onClick={() => handleRowClick(customer)}
                     >
-                      <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                      <span className="block text-sm font-medium text-gray-800 dark:text-white/90">
                         {customer.name}
                       </span>
                     </td>
                     <td 
-                      className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400"
+                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
                       onClick={() => handleRowClick(customer)}
                     >
                       {customer.email}
                     </td>
                     <td 
-                      className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400"
+                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
                       onClick={() => handleRowClick(customer)}
                     >
                       {customer.phone}
                     </td>
                     <td 
-                      className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400"
+                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
                       onClick={() => handleRowClick(customer)}
                     >
                       {customer.total_completed_bookings}
                     </td>
                     <td 
-                      className="px-4 py-3 text-start text-theme-sm dark:text-gray-400"
+                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
                       onClick={() => handleRowClick(customer)}
                     >
                       {customer.loyalty_program ? (
@@ -232,7 +247,7 @@ export default function CustomerTable() {
                       )}
                     </td>
                     <td 
-                      className="px-4 py-3 text-start"
+                      className="px-3 py-3 text-sm text-gray-600 text-start dark:text-gray-400"
                       onClick={() => handleRowClick(customer)}
                     >
                       <Badge 
@@ -247,8 +262,8 @@ export default function CustomerTable() {
               ) : (
                 <TableRow>
                   <td
-                    colSpan={6}
-                    className="px-5 py-8 text-center text-gray-500 dark:text-gray-400"
+                    colSpan={7}
+                    className="border-b border-gray-200 px-3 py-4 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
                   >
                     No customers found matching your filters.
                   </td>

@@ -236,25 +236,31 @@ export default function ServiceTable() {
       {/* Table */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
         <div className="max-w-full overflow-x-auto">
-          <Table>
+          <Table className="w-full border-collapse">
             {/* Table Header */}
-            <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-              <TableRow>
+            <TableHeader>
+              <TableRow className="bg-gray-50 dark:bg-gray-800/50">
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="w-12 border-b border-r border-gray-200 px-2 py-2.5 text-sm font-medium text-gray-700 text-center dark:border-gray-700 dark:text-gray-300"
+                >
+                  #
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Service Name
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Duration
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="border-b border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Price
                 </TableCell>
@@ -262,29 +268,38 @@ export default function ServiceTable() {
             </TableHeader>
 
             {/* Table Body */}
-            <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+            <TableBody>
               {paginatedServices.length > 0 ? (
-                paginatedServices.map((service) => (
+                paginatedServices.map((service, index) => (
                   <TableRow 
                     key={service._id}
-                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    className={`cursor-pointer border-b border-gray-200 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/50 ${
+                      index % 2 === 0 
+                        ? "bg-white dark:bg-white/[0.02]" 
+                        : "bg-gray-50/50 dark:bg-gray-800/30"
+                    }`}
                   >
                     <td 
-                      className="px-5 py-4 sm:px-6 text-start"
+                      className="w-12 border-r border-gray-200 px-2 py-3 text-sm text-gray-600 text-center dark:border-gray-700 dark:text-gray-400"
+                    >
+                      {startIndex + index + 1}
+                    </td>
+                    <td 
+                      className="border-r border-gray-200 px-3 py-3 text-start dark:border-gray-700"
                       onClick={() => handleRowClick(service)}
                     >
-                      <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                      <span className="block text-sm font-medium text-gray-800 dark:text-white/90">
                         {service.name}
                       </span>
                     </td>
                     <td 
-                      className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400"
+                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
                       onClick={() => handleRowClick(service)}
                     >
                       {service.duration_minutes} min
                     </td>
                     <td 
-                      className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400"
+                      className="px-3 py-3 text-sm text-gray-600 text-start dark:text-gray-400"
                       onClick={() => handleRowClick(service)}
                     >
                       RM {service.price}
@@ -294,8 +309,8 @@ export default function ServiceTable() {
               ) : (
                 <TableRow>
                   <td
-                    colSpan={3}
-                    className="px-5 py-8 text-center text-gray-500 dark:text-gray-400"
+                    colSpan={4}
+                    className="border-b border-gray-200 px-3 py-4 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
                   >
                     No services found matching your filters.
                   </td>
@@ -388,4 +403,5 @@ export default function ServiceTable() {
     </div>
   );
 }
+
 

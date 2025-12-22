@@ -171,37 +171,43 @@ export default function StaffTable() {
       {/* Table */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
         <div className="max-w-full overflow-x-auto">
-          <Table>
+          <Table className="w-full border-collapse">
             {/* Table Header */}
-            <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-              <TableRow>
+            <TableHeader>
+              <TableRow className="bg-gray-50 dark:bg-gray-800/50">
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-center dark:border-gray-700 dark:text-gray-300"
+                >
+                  #
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Name
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Phone
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Email
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Position
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="border-b border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Status
                 </TableCell>
@@ -209,12 +215,12 @@ export default function StaffTable() {
             </TableHeader>
 
             {/* Table Body */}
-            <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+            <TableBody>
               {loading ? (
                 <TableRow>
                   <td
-                    colSpan={5}
-                    className="px-5 py-8 text-center text-gray-500 dark:text-gray-400"
+                    colSpan={6}
+                    className="border-b border-gray-200 px-3 py-4 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
                   >
                     Loading staff data...
                   </td>
@@ -223,45 +229,54 @@ export default function StaffTable() {
                 <TableRow>
                   <td
                     colSpan={5}
-                    className="px-5 py-8 text-center text-red-500 dark:text-red-400"
+                    className="border-b border-gray-200 px-3 py-4 text-center text-sm text-red-500 dark:border-gray-700 dark:text-red-400"
                   >
                     {error}
                   </td>
                 </TableRow>
               ) : staffs.length > 0 ? (
-                staffs.map((staff) => (
+                staffs.map((staff, index) => (
                   <TableRow 
                     key={staff.id}
-                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    className={`cursor-pointer border-b border-gray-200 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/50 ${
+                      index % 2 === 0 
+                        ? "bg-white dark:bg-white/[0.02]" 
+                        : "bg-gray-50/50 dark:bg-gray-800/30"
+                    }`}
                   >
                     <td 
-                      className="px-5 py-4 sm:px-6 text-start"
+                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-center dark:border-gray-700 dark:text-gray-400"
+                    >
+                      {startIndex + index + 1}
+                    </td>
+                    <td 
+                      className="border-r border-gray-200 px-3 py-3 text-start dark:border-gray-700"
                       onClick={() => handleRowClick(staff)}
                     >
-                      <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                      <span className="block text-sm font-medium text-gray-800 dark:text-white/90">
                         {staff.name}
                       </span>
                     </td>
                     <td 
-                      className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400"
+                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
                       onClick={() => handleRowClick(staff)}
                     >
                       {staff.phone}
                     </td>
                     <td 
-                      className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400"
+                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
                       onClick={() => handleRowClick(staff)}
                     >
                       {staff.email}
                     </td>
                     <td 
-                      className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400"
+                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
                       onClick={() => handleRowClick(staff)}
                     >
                       {staff.position}
                     </td>
                     <td 
-                      className="px-5 py-4 text-start"
+                      className="px-3 py-3 text-sm text-gray-600 text-start dark:text-gray-400"
                       onClick={() => handleRowClick(staff)}
                     >
                       <Badge 
@@ -276,8 +291,8 @@ export default function StaffTable() {
               ) : (
                 <TableRow>
                   <td
-                    colSpan={5}
-                    className="px-5 py-8 text-center text-gray-500 dark:text-gray-400"
+                    colSpan={6}
+                    className="border-b border-gray-200 px-3 py-4 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
                   >
                     No staff found matching your filters.
                   </td>
@@ -363,4 +378,5 @@ export default function StaffTable() {
     </div>
   );
 }
+
 
