@@ -6,7 +6,7 @@ import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Button from "../ui/button/Button";
 import Toast from "../ui/toast/Toast";
-import { createCorporation } from "../../services/api";
+import { createCorporation } from "../../services/corporations";
 
 interface CorporationFormData {
   name: string;

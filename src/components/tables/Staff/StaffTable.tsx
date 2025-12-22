@@ -12,7 +12,6 @@ import Input from "../../form/input/InputField";
 import Select from "../../form/Select";
 import Badge from "../../ui/badge/Badge";
 import { ChevronLeftIcon, AngleRightIcon } from "../../../icons";
-import StaffDetailsModal from "../../modals/StaffDetailsModal";
 import Toast from "../../ui/toast/Toast";
 
 export interface Staff {
@@ -59,7 +58,7 @@ const generateDummyStaff = (): Staff[] => {
   return staff;
 };
 
-const staffData: Staff[] = generateDummyStaff();
+export const staffData: Staff[] = generateDummyStaff();
 
 const ITEMS_PER_PAGE = 20;
 
@@ -78,8 +77,6 @@ export default function StaffTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [dayFilter, setDayFilter] = useState("");
-  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
   // Filter staff based on search and filters
@@ -125,8 +122,7 @@ export default function StaffTable() {
   };
 
   const handleRowClick = (staff: Staff) => {
-    setSelectedStaff(staff);
-    setIsModalOpen(true);
+    navigate(`/staff/${staff._id}`);
   };
 
   const handleEdit = (staffId: string) => {
@@ -140,11 +136,6 @@ export default function StaffTable() {
     setShowToast(true);
     // In a real app, you would make an API call here
     // After successful deletion, show the toast
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedStaff(null);
   };
 
   // Get unique days for filter
@@ -346,15 +337,6 @@ export default function StaffTable() {
           </div>
         </div>
       )}
-
-      {/* Staff Details Modal */}
-      <StaffDetailsModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        staff={selectedStaff}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
 
       {/* Success Toast */}
       <Toast

@@ -5,12 +5,12 @@ import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Button from "../ui/button/Button";
 import Toast from "../ui/toast/Toast";
-import { Customer } from "../tables/Customers/CustomerTable";
+import { CustomerData } from "../../services/customers";
 
 interface CreateCustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCustomerCreated: (customer: Customer) => void;
+  onCustomerCreated: (customer: CustomerData) => void;
 }
 
 interface CustomerFormData {
@@ -83,15 +83,19 @@ export default function CreateCustomerModal({
     // Simulate API call
     setTimeout(() => {
       // Generate a new customer ID (in real app, this would come from the API)
-      const newCustomer: Customer = {
-        _id: Date.now().toString(), // Temporary ID
-        first_name: formData.first_name,
-        last_name: formData.last_name,
+      const newCustomer: CustomerData = {
+        id: Date.now().toString(), // Temporary ID
+        corporation_id: "",
+        name: `${formData.first_name} ${formData.last_name}`,
         phone: formData.phone,
         email: formData.email,
-        completed_bookings_count: 0,
-        free_appointment_available: false,
-        total_free_appointments_used: 0,
+        total_completed_bookings: 0,
+        loyalty_program_id: null,
+        status: 1,
+        status_label: "Active",
+        loyalty_program: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
       console.log("Customer created:", newCustomer);

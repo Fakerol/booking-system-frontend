@@ -6,7 +6,7 @@ import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
 import Toast from "../ui/toast/Toast";
 import { useAuth } from "../../context/AuthContext";
-import { registerUser } from "../../services/api";
+import { registerUser } from "../../services/auth";
 
 export default function SignUpForm() {
   const navigate = useNavigate();

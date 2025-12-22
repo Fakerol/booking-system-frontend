@@ -12,7 +12,6 @@ import Badge from "../../ui/badge/Badge";
 import Input from "../../form/input/InputField";
 import Select from "../../form/Select";
 import { ChevronLeftIcon, AngleRightIcon } from "../../../icons";
-import BookingDetailsModal from "../../modals/BookingDetailsModal";
 import Toast from "../../ui/toast/Toast";
 
 export interface Booking {
@@ -103,7 +102,7 @@ const generateDummyBookings = (): Booking[] => {
   return bookings;
 };
 
-const bookingData: Booking[] = generateDummyBookings();
+export const bookingData: Booking[] = generateDummyBookings();
 
 const ITEMS_PER_PAGE = 20;
 
@@ -114,8 +113,6 @@ export default function BookingTable() {
   const [statusFilter, setStatusFilter] = useState("");
   const [staffFilter, setStaffFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
   // Get unique staff names for filter
@@ -169,8 +166,7 @@ export default function BookingTable() {
   };
 
   const handleRowClick = (booking: Booking) => {
-    setSelectedBooking(booking);
-    setIsModalOpen(true);
+    navigate(`/bookings/${booking._id}`);
   };
 
   const handleEdit = (bookingId: string) => {
@@ -184,11 +180,6 @@ export default function BookingTable() {
     setShowToast(true);
     // In a real app, you would make an API call here
     // After successful deletion, show the toast
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedBooking(null);
   };
 
   return (
@@ -474,15 +465,6 @@ export default function BookingTable() {
           </div>
         </div>
       )}
-
-      {/* Booking Details Modal */}
-      <BookingDetailsModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        booking={selectedBooking}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
 
       {/* Success Toast */}
       <Toast

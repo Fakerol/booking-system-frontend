@@ -12,7 +12,6 @@ import Input from "../../form/input/InputField";
 import Select from "../../form/Select";
 import Badge from "../../ui/badge/Badge";
 import { ChevronLeftIcon, AngleRightIcon } from "../../../icons";
-import UserDetailsModal from "../../modals/UserDetailsModal";
 import Toast from "../../ui/toast/Toast";
 
 export interface User {
@@ -50,7 +49,7 @@ const generateDummyUsers = (): User[] => {
   return users;
 };
 
-const userData: User[] = generateDummyUsers();
+export const userData: User[] = generateDummyUsers();
 
 const ITEMS_PER_PAGE = 20;
 
@@ -59,8 +58,6 @@ export default function UserTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
   // Filter users based on search and filters
@@ -106,8 +103,7 @@ export default function UserTable() {
   };
 
   const handleRowClick = (user: User) => {
-    setSelectedUser(user);
-    setIsModalOpen(true);
+    navigate(`/users/${user._id}`);
   };
 
   const handleEdit = (userId: string) => {
@@ -121,11 +117,6 @@ export default function UserTable() {
     setShowToast(true);
     // In a real app, you would make an API call here
     // After successful deletion, show the toast
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedUser(null);
   };
 
   const getRoleColor = (role: string) => {
@@ -304,15 +295,6 @@ export default function UserTable() {
           </div>
         </div>
       )}
-
-      {/* User Details Modal */}
-      <UserDetailsModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        user={selectedUser}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
 
       {/* Success Toast */}
       <Toast

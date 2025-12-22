@@ -11,7 +11,6 @@ import {
 import Input from "../../form/input/InputField";
 import Select from "../../form/Select";
 import { ChevronLeftIcon, AngleRightIcon } from "../../../icons";
-import ServiceDetailsModal from "../../modals/ServiceDetailsModal";
 import Toast from "../../ui/toast/Toast";
 
 export interface Service {
@@ -89,7 +88,7 @@ const generateDummyServices = (): Service[] => {
   return services;
 };
 
-const serviceData: Service[] = generateDummyServices();
+export const serviceData: Service[] = generateDummyServices();
 
 const ITEMS_PER_PAGE = 20;
 
@@ -99,8 +98,6 @@ export default function ServiceTable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [durationFilter, setDurationFilter] = useState("");
   const [priceFilter, setPriceFilter] = useState("");
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
   // Filter services based on search and filters
@@ -150,8 +147,7 @@ export default function ServiceTable() {
   };
 
   const handleRowClick = (service: Service) => {
-    setSelectedService(service);
-    setIsModalOpen(true);
+    navigate(`/services/${service._id}`);
   };
 
   const handleEdit = (serviceId: string) => {
@@ -165,11 +161,6 @@ export default function ServiceTable() {
     setShowToast(true);
     // In a real app, you would make an API call here
     // After successful deletion, show the toast
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedService(null);
   };
 
   // Get unique durations for filter
@@ -387,15 +378,6 @@ export default function ServiceTable() {
           </div>
         </div>
       )}
-
-      {/* Service Details Modal */}
-      <ServiceDetailsModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        service={selectedService}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
 
       {/* Success Toast */}
       <Toast

@@ -7,99 +7,88 @@ import Input from "../form/input/InputField";
 import Button from "../ui/button/Button";
 import Toast from "../ui/toast/Toast";
 import Badge from "../ui/badge/Badge";
-import { Customer } from "../tables/Customers/CustomerTable";
+import { getCustomerById, updateCustomer } from "../../services/customers";
 
 interface CustomerFormData {
-  first_name: string;
-  last_name: string;
+  name: string;
   phone: string;
   email: string;
-  completed_bookings_count: number;
-  free_appointment_available: boolean;
-  total_free_appointments_used: number;
+  status: number;
 }
-
-// Mock function to fetch customer by ID
-const fetchCustomerById = (id: string): Customer | null => {
-  // In a real app, this would fetch from an API
-  const firstNames = ["John", "Jane", "Bob", "Alice", "Charlie"];
-  const lastNames = ["Doe", "Smith", "Johnson", "Williams", "Brown"];
-  
-  // Generate a mock customer based on ID
-  const idx = parseInt(id) % firstNames.length;
-  const completedBookings = Math.floor(Math.random() * 15);
-  const freeAppointmentAvailable = completedBookings >= 10;
-  
-  return {
-    _id: id,
-    first_name: firstNames[idx],
-    last_name: lastNames[idx],
-    phone: `+1${Math.floor(Math.random() * 9000000000) + 1000000000}`,
-    email: `${firstNames[idx].toLowerCase()}.${lastNames[idx].toLowerCase()}@example.com`,
-    completed_bookings_count: completedBookings,
-    free_appointment_available: freeAppointmentAvailable,
-    total_free_appointments_used: Math.floor(completedBookings / 10),
-  };
-};
 
 export default function EditCustomerForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   
   const [formData, setFormData] = useState<CustomerFormData>({
-    first_name: "",
-    last_name: "",
+    name: "",
     phone: "",
     email: "",
-    completed_bookings_count: 0,
-    free_appointment_available: false,
-    total_free_appointments_used: 0,
+    status: 1,
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof CustomerFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
 
   // Load customer data on mount
   useEffect(() => {
     if (id) {
-      const customer = fetchCustomerById(id);
-      if (customer) {
-        setFormData({
-          first_name: customer.first_name,
-          last_name: customer.last_name,
-          phone: customer.phone,
-          email: customer.email,
-          completed_bookings_count: customer.completed_bookings_count,
-          free_appointment_available: customer.free_appointment_available,
-          total_free_appointments_used: customer.total_free_appointments_used,
-        });
-      }
-      setIsLoading(false);
+      fetchCustomer();
     }
   }, [id]);
+
+  const fetchCustomer = async () => {
+    setIsLoading(true);
+    
+    try {
+      const response = await getCustomerById(id!);
+      
+      if (response.success && response.data) {
+        const customer = response.data.customer;
+        setFormData({
+          name: customer.name,
+          phone: customer.phone || "",
+          email: customer.email || "",
+          status: customer.status,
+        });
+      } else {
+        const errorResponse = response as { success: false; message: string };
+        setToastMessage(errorResponse.message || "Failed to load customer");
+        setToastType("error");
+        setShowToast(true);
+      }
+    } catch (err) {
+      setToastMessage("An error occurred while loading customer");
+      setToastType("error");
+      setShowToast(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof CustomerFormData, string>> = {};
 
-    if (!formData.first_name.trim()) {
-      newErrors.first_name = "First name is required";
+    // Name is required (max 255 characters)
+    if (!formData.name.trim()) {
+      newErrors.name = "Name is required";
+    } else if (formData.name.length > 255) {
+      newErrors.name = "Name must be less than 255 characters";
     }
 
-    if (!formData.last_name.trim()) {
-      newErrors.last_name = "Last name is required";
-    }
-
-    if (!formData.phone.trim()) {
-      newErrors.phone = "Phone number is required";
-    } else if (!/^\+?[\d\s-()]+$/.test(formData.phone)) {
+    // Phone is optional, but if provided, validate format
+    if (formData.phone.trim() && !/^\+?[\d\s-()]+$/.test(formData.phone)) {
       newErrors.phone = "Please enter a valid phone number";
+    } else if (formData.phone.length > 20) {
+      newErrors.phone = "Phone number must be less than 20 characters";
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    // Email is optional, but if provided, validate format
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Please enter a valid email address";
     }
 
@@ -107,7 +96,7 @@ export default function EditCustomerForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (field: keyof CustomerFormData, value: string) => {
+  const handleInputChange = (field: keyof CustomerFormData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error for this field when user starts typing
     if (errors[field]) {
@@ -115,28 +104,84 @@ export default function EditCustomerForm() {
     }
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
 
+    if (!id) {
+      return;
+    }
+
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Customer updated:", formData);
-      
-      // Here you would typically make an API call to update the customer
-      setIsSubmitting(false);
+    try {
+      // Prepare payload - only include fields that have values
+      const payload: {
+        name?: string;
+        phone?: string;
+        email?: string;
+        status?: number;
+      } = {};
+
+      if (formData.name.trim()) {
+        payload.name = formData.name.trim();
+      }
+      if (formData.phone.trim()) {
+        payload.phone = formData.phone.trim();
+      }
+      if (formData.email.trim()) {
+        payload.email = formData.email.trim();
+      }
+      if (formData.status !== undefined) {
+        payload.status = formData.status;
+      }
+
+      const response = await updateCustomer(id, payload);
+
+      if (response.success && response.data) {
+        setToastMessage("Customer updated successfully!");
+        setToastType("success");
+        setShowToast(true);
+        
+        // Navigate after showing toast
+        setTimeout(() => {
+          navigate("/customers");
+        }, 2000);
+      } else {
+        // Handle API errors
+        const errorResponse = response as { success: false; message: string; errors?: Record<string, string[]> };
+        let errorMessage = errorResponse.message || "Failed to update customer";
+        
+        // Check if there are field-specific errors
+        if (errorResponse.errors) {
+          const fieldErrors = Object.entries(errorResponse.errors)
+            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(", ") : messages}`)
+            .join("; ");
+          errorMessage = fieldErrors || errorMessage;
+        }
+
+        setErrors({
+          ...errors,
+          name: errorResponse.errors?.name?.[0] || undefined,
+          email: errorResponse.errors?.email?.[0] || undefined,
+          phone: errorResponse.errors?.phone?.[0] || undefined,
+        });
+
+        setToastMessage(errorMessage);
+        setToastType("error");
+        setShowToast(true);
+        setIsSubmitting(false);
+      }
+    } catch (error) {
+      console.error("Error updating customer:", error);
+      setToastMessage("An unexpected error occurred. Please try again.");
+      setToastType("error");
       setShowToast(true);
-      
-      // Navigate after showing toast
-      setTimeout(() => {
-        navigate("/customers");
-      }, 3100);
-    }, 1000);
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -147,7 +192,7 @@ export default function EditCustomerForm() {
     return (
       <ComponentCard title="Edit Customer">
         <div className="flex items-center justify-center py-8">
-          <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+          <p className="text-gray-500 dark:text-gray-400">Loading customer details...</p>
         </div>
       </ComponentCard>
     );
@@ -156,127 +201,82 @@ export default function EditCustomerForm() {
   return (
     <>
       <Toast
-        message="Customer updated successfully!"
+        message={toastMessage}
         isVisible={showToast}
         onClose={() => setShowToast(false)}
+        type={toastType}
       />
       <ComponentCard title="Edit Customer">
         <Form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {/* First Name */}
+          {/* Name */}
           <div>
-            <Label htmlFor="first_name">First Name *</Label>
+            <Label htmlFor="name">Name *</Label>
             <Input
-              id="first_name"
-              name="first_name"
+              id="name"
+              name="name"
               type="text"
-              placeholder="Enter first name"
-              value={formData.first_name}
-              onChange={(e) => handleInputChange("first_name", e.target.value)}
-              error={!!errors.first_name}
-              hint={errors.first_name}
-            />
-          </div>
-
-          {/* Last Name */}
-          <div>
-            <Label htmlFor="last_name">Last Name *</Label>
-            <Input
-              id="last_name"
-              name="last_name"
-              type="text"
-              placeholder="Enter last name"
-              value={formData.last_name}
-              onChange={(e) => handleInputChange("last_name", e.target.value)}
-              error={!!errors.last_name}
-              hint={errors.last_name}
+              placeholder="Enter full name"
+              value={formData.name}
+              onChange={(e) => handleInputChange("name", e.target.value)}
+              error={!!errors.name}
+              hint={errors.name}
+              maxLength={255}
             />
           </div>
 
           {/* Phone Number */}
           <div>
-            <Label htmlFor="phone">Phone Number *</Label>
+            <Label htmlFor="phone">Phone Number</Label>
             <Input
               id="phone"
               name="phone"
               type="tel"
-              placeholder="Enter phone number"
+              placeholder="Enter phone number (optional)"
               value={formData.phone}
               onChange={(e) => handleInputChange("phone", e.target.value)}
               error={!!errors.phone}
               hint={errors.phone}
+              maxLength={20}
             />
           </div>
 
           {/* Email */}
           <div>
-            <Label htmlFor="email">Email *</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               name="email"
               type="email"
-              placeholder="Enter email address"
+              placeholder="Enter email address (optional)"
               value={formData.email}
               onChange={(e) => handleInputChange("email", e.target.value)}
               error={!!errors.email}
               hint={errors.email}
             />
           </div>
-        </div>
 
-        {/* Loyalty Information (Read-only) */}
-        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
-          <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
-            Loyalty Program Status
-          </h3>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div>
-              <Label>Completed Bookings</Label>
-              <div className="mt-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">
-                    {formData.completed_bookings_count} / 10
-                  </span>
-                  {formData.free_appointment_available && (
-                    <Badge color="success" size="sm">
-                      Free Available
-                    </Badge>
-                  )}
-                </div>
-                <div className="mt-2 w-full h-2 bg-gray-200 rounded-full overflow-hidden dark:bg-gray-700">
-                  <div
-                    className="h-full bg-brand-500 transition-all"
-                    style={{
-                      width: `${Math.min((formData.completed_bookings_count / 10) * 100, 100)}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-            <div>
-              <Label>Free Appointments Used</Label>
-              <div className="mt-2 text-lg font-bold text-gray-900 dark:text-white">
-                {formData.total_free_appointments_used}
-              </div>
-            </div>
-            <div>
-              <Label>Status</Label>
-              <div className="mt-2">
-                {formData.free_appointment_available ? (
-                  <Badge color="success" size="sm">
-                    Eligible for Free Appointment
-                  </Badge>
-                ) : (
-                  <Badge color="info" size="sm">
-                    {10 - formData.completed_bookings_count} more bookings needed
-                  </Badge>
-                )}
-              </div>
-            </div>
+          {/* Status */}
+          <div>
+            <Label htmlFor="status">Status</Label>
+            <select
+              id="status"
+              name="status"
+              value={formData.status}
+              onChange={(e) => handleInputChange("status", parseInt(e.target.value, 10))}
+              className={`w-full rounded-lg border px-4 py-3 text-sm transition-colors ${
+                errors.status
+                  ? "border-error-500 focus:border-error-500 focus:ring-error-500"
+                  : "border-gray-300 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              } focus:outline-none focus:ring-2`}
+            >
+              <option value={1}>Active</option>
+              <option value={0}>Inactive</option>
+            </select>
+            {errors.status && (
+              <p className="mt-1.5 text-xs text-error-500">{errors.status}</p>
+            )}
           </div>
-          <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-            Note: Loyalty information is automatically updated when bookings are completed. This information is read-only.
-          </p>
         </div>
 
         {/* Form Actions */}
@@ -303,4 +303,3 @@ export default function EditCustomerForm() {
     </>
   );
 }
-

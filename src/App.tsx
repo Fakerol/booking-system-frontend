@@ -21,6 +21,11 @@ import EditService from "./pages/Services/EditService";
 import Customers from "./pages/Customers/Customers";
 import CreateCustomer from "./pages/Customers/CreateCustomer";
 import EditCustomer from "./pages/Customers/EditCustomer";
+import CustomerDetails from "./pages/Customers/CustomerDetails";
+import BookingDetails from "./pages/Bookings/BookingDetails";
+import ServiceDetails from "./pages/Services/ServiceDetails";
+import UserDetails from "./pages/Users/UserDetails";
+import StaffDetails from "./pages/Staff/StaffDetails";
 import Staffs from "./pages/Staff/Staffs";
 import CreateStaff from "./pages/Staff/CreateStaff";
 import EditStaff from "./pages/Staff/EditStaff";
@@ -63,18 +68,23 @@ export default function App() {
             <Route path="/bookings" element={<Bookings />} />
             <Route path="/bookings/new" element={<CreateBooking />} />
             <Route path="/bookings/edit/:id" element={<EditBooking />} />
+            <Route path="/bookings/:id" element={<BookingDetails />} />
             <Route path="/services" element={<Services />} />
             <Route path="/services/new" element={<CreateService />} />
             <Route path="/services/edit/:id" element={<EditService />} />
+            <Route path="/services/:id" element={<ServiceDetails />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/customers/new" element={<CreateCustomer />} />
             <Route path="/customers/edit/:id" element={<EditCustomer />} />
+            <Route path="/customers/:id" element={<CustomerDetails />} />
             <Route path="/staff" element={<Staffs />} />
             <Route path="/staff/new" element={<CreateStaff />} />
             <Route path="/staff/edit/:id" element={<EditStaff />} />
+            <Route path="/staff/:id" element={<StaffDetails />} />
             <Route path="/users" element={<Users />} />
             <Route path="/users/new" element={<CreateUser />} />
             <Route path="/users/edit/:id" element={<EditUser />} />
+            <Route path="/users/:id" element={<UserDetails />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/blank" element={<Blank />} />
 
