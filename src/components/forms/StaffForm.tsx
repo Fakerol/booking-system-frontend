@@ -228,22 +228,26 @@ export default function StaffForm() {
             />
           </div>
 
-          {/* Active Status */}
+          {/* Status */}
           <div>
             <Label htmlFor="is_active">Status</Label>
-            <div className="mt-2">
-              <label className="flex items-center space-x-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.is_active}
-                  onChange={(e) => handleInputChange("is_active", e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800"
-                />
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  Active
-                </span>
-              </label>
-            </div>
+            <select
+              id="is_active"
+              name="is_active"
+              value={formData.is_active ? 1 : 0}
+              onChange={(e) => handleInputChange("is_active", parseInt(e.target.value, 10) === 1)}
+              className={`h-11 w-full rounded-lg border appearance-none px-4 py-2.5 text-sm shadow-theme-xs focus:outline-hidden focus:ring-3 dark:bg-gray-900 dark:text-white/90 ${
+                errors.is_active
+                  ? "border-error-500 focus:border-error-300 focus:ring-error-500/20 dark:text-error-400 dark:border-error-500 dark:focus:border-error-800"
+                  : "bg-transparent text-gray-800 border-gray-300 focus:border-brand-300 focus:ring-brand-500/20 dark:border-gray-700 dark:text-white/90 dark:focus:border-brand-800"
+              }`}
+            >
+              <option value={1}>Active</option>
+              <option value={0}>Inactive</option>
+            </select>
+            {errors.is_active && (
+              <p className="mt-1.5 text-xs text-error-500">{errors.is_active}</p>
+            )}
           </div>
         </div>
 

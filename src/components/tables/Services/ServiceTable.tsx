@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   Table,
@@ -10,125 +10,92 @@ import {
 
 import Input from "../../form/input/InputField";
 import Select from "../../form/Select";
+import Badge from "../../ui/badge/Badge";
 import { ChevronLeftIcon, AngleRightIcon } from "../../../icons";
-import Toast from "../../ui/toast/Toast";
+import { getServices, getServiceCategories, ServiceData, GetServicesParams } from "../../../services/services";
 
-export interface Service {
-  _id: string;
-  name: string;
-  duration_minutes: number;
-  price: number;
-  description?: string;
-}
+// Export ServiceData as Service for backward compatibility with other components
+export type Service = ServiceData;
 
-// Generate 30 dummy services
-const generateDummyServices = (): Service[] => {
-  const serviceNames = [
-    "Haircut", "Hair Color", "Hair Styling", "Beard Trim", "Shampoo",
-    "Hair Extension", "Hair Treatment", "Hair Wash", "Hair Cut & Style",
-    "Hair Coloring", "Full Haircut", "Hair Spa", "Hair Straightening",
-    "Hair Perm", "Hair Highlighting", "Hair Blow Dry", "Hair Braiding",
-    "Hair Updo", "Hair Bleaching", "Hair Toning", "Hair Glazing",
-    "Hair Conditioning", "Hair Scalp Treatment", "Hair Keratin Treatment",
-    "Hair Frizz Control", "Hair Volumizing", "Hair Smoothing", "Hair Curling",
-    "Hair Rebonding", "Hair Bonding"
-  ];
-
-  const durations = [15, 30, 45, 60, 90, 120];
-  const prices = [15, 25, 35, 50, 75, 100, 150, 200];
-
-  const services: Service[] = [];
-  
-  for (let i = 0; i < 30; i++) {
-    const randomDurationIndex = Math.floor(Math.random() * durations.length);
-    const randomPriceIndex = Math.floor(Math.random() * prices.length);
-    
-    const descriptions = [
-      "Professional haircut service with modern styling techniques.",
-      "Expert hair coloring service with premium color products.",
-      "Professional hair styling for any occasion.",
-      "Precise beard trimming and shaping service.",
-      "Deep cleansing shampoo treatment for healthy hair.",
-      "Natural hair extension service with quality materials.",
-      "Intensive hair treatment for damaged hair.",
-      "Refreshing hair wash and conditioning service.",
-      "Complete haircut and styling package.",
-      "Professional hair coloring with consultation.",
-      "Full service haircut with styling.",
-      "Relaxing hair spa treatment.",
-      "Hair straightening service for smooth results.",
-      "Professional hair perming service.",
-      "Hair highlighting for dimension and depth.",
-      "Professional blow dry styling service.",
-      "Intricate hair braiding service.",
-      "Elegant hair updo for special occasions.",
-      "Hair bleaching service for lightening.",
-      "Hair toning service for color correction.",
-      "Hair glazing for shine and protection.",
-      "Deep conditioning treatment for hair health.",
-      "Scalp treatment for healthy hair growth.",
-      "Keratin treatment for smooth, frizz-free hair.",
-      "Frizz control treatment for manageable hair.",
-      "Volumizing treatment for fuller hair.",
-      "Hair smoothing service for sleek look.",
-      "Hair curling service for beautiful waves.",
-      "Hair rebonding for straight, smooth hair.",
-      "Hair bonding treatment for strength.",
-    ];
-
-    services.push({
-      _id: (i + 1).toString(),
-      name: serviceNames[i % serviceNames.length],
-      duration_minutes: durations[randomDurationIndex],
-      price: prices[randomPriceIndex],
-      description: descriptions[i % descriptions.length],
-    });
-  }
-
-  return services;
-};
-
-export const serviceData: Service[] = generateDummyServices();
-
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 15;
 
 export default function ServiceTable() {
   const navigate = useNavigate();
+  const [services, setServices] = useState<ServiceData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [durationFilter, setDurationFilter] = useState("");
-  const [priceFilter, setPriceFilter] = useState("");
-  const [showToast, setShowToast] = useState(false);
+  const [isActiveFilter, setIsActiveFilter] = useState<string>("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categories, setCategories] = useState<string[]>([]);
 
-  // Filter services based on search and filters
-  const filteredServices = useMemo(() => {
-    return serviceData.filter((service) => {
-      const matchesSearch =
-        searchTerm === "" ||
-        service.name.toLowerCase().includes(searchTerm.toLowerCase());
+  // Debounce search term
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
-      const matchesDuration = 
-        durationFilter === "" || 
-        service.duration_minutes.toString() === durationFilter;
-
-      const matchesPrice = 
-        priceFilter === "" || 
-        service.price.toString() === priceFilter;
-
-      return matchesSearch && matchesDuration && matchesPrice;
-    });
-  }, [searchTerm, durationFilter, priceFilter]);
-
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredServices.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedServices = filteredServices.slice(startIndex, endIndex);
-
-  // Reset to page 1 when filters change
+  // Fetch categories on mount
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, durationFilter, priceFilter]);
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch services when filters or page change
+  useEffect(() => {
+    fetchServices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, isActiveFilter, categoryFilter, debouncedSearchTerm]);
+
+  const fetchCategories = async () => {
+    const response = await getServiceCategories();
+    if (response.success && response.data) {
+      setCategories(response.data.categories);
+    }
+  };
+
+  const fetchServices = async () => {
+    setLoading(true);
+    setError(null);
+
+    const params: GetServicesParams = {
+      per_page: ITEMS_PER_PAGE,
+      page: currentPage,
+    };
+
+    if (debouncedSearchTerm.trim()) {
+      params.search = debouncedSearchTerm.trim();
+    }
+
+    if (isActiveFilter !== "") {
+      params.is_active = isActiveFilter === "true" ? true : isActiveFilter === "false" ? false : isActiveFilter;
+    }
+
+    if (categoryFilter) {
+      params.category = categoryFilter;
+    }
+
+    const response = await getServices(params);
+
+    if (response.success && response.data) {
+      setServices(response.data.services);
+      setTotalPages(response.data.pagination.last_page);
+      setTotal(response.data.pagination.total);
+    } else {
+      setError(response.message || "Failed to fetch services");
+      setServices([]);
+    }
+
+    setLoading(false);
+  };
 
   const handlePrevious = () => {
     if (currentPage > 1) {
@@ -146,34 +113,20 @@ export default function ServiceTable() {
     setCurrentPage(page);
   };
 
-  const handleRowClick = (service: Service) => {
-    navigate(`/services/${service._id}`);
+  const handleRowClick = (service: ServiceData) => {
+    navigate(`/services/${service.id}`);
   };
 
-  const handleEdit = (serviceId: string) => {
-    navigate(`/services/edit/${serviceId}`);
+  const getStatusBadgeColor = (statusLabel: string) => {
+    if (statusLabel.toLowerCase() === "active") {
+      return "success";
+    }
+    return "error";
   };
 
-  const handleDelete = (serviceId: string) => {
-    // In a real app, this would call an API to delete the service
-    console.log("Delete service:", serviceId);
-    // For now, we'll just log it since we're using dummy data
-    setShowToast(true);
-    // In a real app, you would make an API call here
-    // After successful deletion, show the toast
-  };
-
-  // Get unique durations for filter
-  const uniqueDurations = useMemo(() => {
-    const durationSet = new Set(serviceData.map(s => s.duration_minutes.toString()));
-    return Array.from(durationSet).sort((a, b) => parseInt(a) - parseInt(b));
-  }, []);
-
-  // Get unique prices for filter
-  const uniquePrices = useMemo(() => {
-    const priceSet = new Set(serviceData.map(s => s.price.toString()));
-    return Array.from(priceSet).sort((a, b) => parseFloat(a) - parseFloat(b));
-  }, []);
+  // Calculate display range
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + services.length, total);
 
   return (
     <div className="space-y-4">
@@ -187,47 +140,51 @@ export default function ServiceTable() {
             </label>
             <Input
               type="text"
-              placeholder="Search by service name..."
+              placeholder="Search by name, description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          {/* Duration Filter */}
+          {/* Status Filter */}
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Duration (minutes)
+              Status
             </label>
             <Select
-              placeholder="All Durations"
+              placeholder="All Status"
               options={[
-                { value: "", label: "All Durations" },
-                ...uniqueDurations.map((duration) => ({
-                  value: duration,
-                  label: `${duration} min`,
-                })),
+                { value: "", label: "All Status" },
+                { value: "true", label: "Active" },
+                { value: "false", label: "Inactive" },
               ]}
               defaultValue=""
-              onChange={(value) => setDurationFilter(value)}
+              onChange={(value) => {
+                setIsActiveFilter(value);
+                setCurrentPage(1);
+              }}
             />
           </div>
 
-          {/* Price Filter */}
+          {/* Category Filter */}
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Price (RM)
+              Category
             </label>
             <Select
-              placeholder="All Prices"
+              placeholder="All Categories"
               options={[
-                { value: "", label: "All Prices" },
-                ...uniquePrices.map((price) => ({
-                  value: price,
-                  label: `RM ${price}`,
+                { value: "", label: "All Categories" },
+                ...categories.map((category) => ({
+                  value: category,
+                  label: category,
                 })),
               ]}
               defaultValue=""
-              onChange={(value) => setPriceFilter(value)}
+              onChange={(value) => {
+                setCategoryFilter(value);
+                setCurrentPage(1);
+              }}
             />
           </div>
         </div>
@@ -242,7 +199,7 @@ export default function ServiceTable() {
               <TableRow className="bg-gray-50 dark:bg-gray-800/50">
                 <TableCell
                   isHeader
-                  className="w-12 border-b border-r border-gray-200 px-2 py-2.5 text-sm font-medium text-gray-700 text-center dark:border-gray-700 dark:text-gray-300"
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-center dark:border-gray-700 dark:text-gray-300"
                 >
                   #
                 </TableCell>
@@ -250,7 +207,19 @@ export default function ServiceTable() {
                   isHeader
                   className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
-                  Service Name
+                  Name
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                >
+                  Description
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                >
+                  Price
                 </TableCell>
                 <TableCell
                   isHeader
@@ -260,19 +229,43 @@ export default function ServiceTable() {
                 </TableCell>
                 <TableCell
                   isHeader
+                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                >
+                  Category
+                </TableCell>
+                <TableCell
+                  isHeader
                   className="border-b border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
-                  Price
+                  Status
                 </TableCell>
               </TableRow>
             </TableHeader>
 
             {/* Table Body */}
             <TableBody>
-              {paginatedServices.length > 0 ? (
-                paginatedServices.map((service, index) => (
+              {loading ? (
+                <TableRow>
+                  <td
+                    colSpan={7}
+                    className="border-b border-gray-200 px-3 py-4 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
+                  >
+                    Loading services data...
+                  </td>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <td
+                    colSpan={7}
+                    className="border-b border-gray-200 px-3 py-4 text-center text-sm text-red-500 dark:border-gray-700 dark:text-red-400"
+                  >
+                    {error}
+                  </td>
+                </TableRow>
+              ) : services.length > 0 ? (
+                services.map((service, index) => (
                   <TableRow 
-                    key={service._id}
+                    key={service.id}
                     className={`cursor-pointer border-b border-gray-200 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/50 ${
                       index % 2 === 0 
                         ? "bg-white dark:bg-white/[0.02]" 
@@ -280,7 +273,7 @@ export default function ServiceTable() {
                     }`}
                   >
                     <td 
-                      className="w-12 border-r border-gray-200 px-2 py-3 text-sm text-gray-600 text-center dark:border-gray-700 dark:text-gray-400"
+                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-center dark:border-gray-700 dark:text-gray-400"
                     >
                       {startIndex + index + 1}
                     </td>
@@ -296,20 +289,45 @@ export default function ServiceTable() {
                       className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
                       onClick={() => handleRowClick(service)}
                     >
-                      {service.duration_minutes} min
+                      <span className="line-clamp-2">
+                        {service.description || "—"}
+                      </span>
+                    </td>
+                    <td 
+                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
+                      onClick={() => handleRowClick(service)}
+                    >
+                      {service.price_formatted}
+                    </td>
+                    <td 
+                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
+                      onClick={() => handleRowClick(service)}
+                    >
+                      {service.duration_formatted}
+                    </td>
+                    <td 
+                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
+                      onClick={() => handleRowClick(service)}
+                    >
+                      {service.category}
                     </td>
                     <td 
                       className="px-3 py-3 text-sm text-gray-600 text-start dark:text-gray-400"
                       onClick={() => handleRowClick(service)}
                     >
-                      RM {service.price}
+                      <Badge 
+                        size="sm" 
+                        color={getStatusBadgeColor(service.status_label)}
+                      >
+                        {service.status_label}
+                      </Badge>
                     </td>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
                   <td
-                    colSpan={4}
+                    colSpan={7}
                     className="border-b border-gray-200 px-3 py-4 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
                   >
                     No services found matching your filters.
@@ -322,14 +340,14 @@ export default function ServiceTable() {
       </div>
 
       {/* Pagination */}
-      {totalPages > 0 && (
+      {totalPages > 0 && !loading && (
         <div className="flex flex-col items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-white/[0.05] dark:bg-white/[0.03] sm:flex-row">
           <div className="text-sm text-gray-700 dark:text-gray-300">
             Showing{" "}
             <span className="font-medium">
-              {startIndex + 1} to {Math.min(endIndex, filteredServices.length)}
+              {startIndex + 1} to {endIndex}
             </span>{" "}
-            of <span className="font-medium">{filteredServices.length}</span>{" "}
+            of <span className="font-medium">{total}</span>{" "}
             results
           </div>
 
@@ -393,15 +411,6 @@ export default function ServiceTable() {
           </div>
         </div>
       )}
-
-      {/* Success Toast */}
-      <Toast
-        message="Service deleted successfully!"
-        isVisible={showToast}
-        onClose={() => setShowToast(false)}
-      />
     </div>
   );
 }
-
-

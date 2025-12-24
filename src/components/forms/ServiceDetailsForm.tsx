@@ -5,36 +5,40 @@ import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Button from "../ui/button/Button";
 import { PencilIcon, TrashBinIcon } from "../../icons";
-import { Service } from "../tables/Services/ServiceTable";
 import Toast from "../ui/toast/Toast";
-
-import { serviceData } from "../tables/Services/ServiceTable";
-
-// Mock function to fetch service by ID
-const fetchServiceById = (id: string): Service | null => {
-  return serviceData.find((s: Service) => s._id === id) || null;
-};
+import { getServiceById, deleteService, ServiceData } from "../../services/services";
 
 export default function ServiceDetailsForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   
-  const [service, setService] = useState<Service | null>(null);
+  const [service, setService] = useState<ServiceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
 
   useEffect(() => {
-    if (id) {
-      const foundService = fetchServiceById(id);
-      if (foundService) {
-        setService(foundService);
-      } else {
-        setError("Service not found");
+    const fetchService = async () => {
+      if (id) {
+        setIsLoading(true);
+        setError(null);
+        
+        const response = await getServiceById(id);
+        
+        if (response.success && response.data) {
+          setService(response.data.service);
+        } else {
+          setError(response.message || "Service not found");
+        }
+        
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    }
+    };
+
+    fetchService();
   }, [id]);
 
   const handleEdit = () => {
@@ -43,13 +47,44 @@ export default function ServiceDetailsForm() {
     }
   };
 
-  const handleDelete = () => {
-    if (window.confirm("Are you sure you want to delete this service?")) {
-      setToastMessage("Service deleted successfully!");
+  const handleDelete = async () => {
+    if (!id) {
+      setToastMessage("Service ID is missing");
+      setToastType("error");
       setShowToast(true);
-      setTimeout(() => {
-        navigate("/services");
-      }, 2000);
+      return;
+    }
+
+    if (!window.confirm("Are you sure you want to delete this service? This action cannot be undone.")) {
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      const response = await deleteService(id);
+
+      if (response.success) {
+        setToastMessage(response.data?.message || "Service deleted successfully!");
+        setToastType("success");
+        setShowToast(true);
+        
+        // Navigate after showing toast
+        setTimeout(() => {
+          navigate("/services");
+        }, 2000);
+      } else {
+        setToastMessage(response.message || "Failed to delete service");
+        setToastType("error");
+        setShowToast(true);
+        setIsDeleting(false);
+      }
+    } catch (error) {
+      console.error("Error deleting service:", error);
+      setToastMessage("An unexpected error occurred. Please try again.");
+      setToastType("error");
+      setShowToast(true);
+      setIsDeleting(false);
     }
   };
 
@@ -86,6 +121,7 @@ export default function ServiceDetailsForm() {
         message={toastMessage}
         isVisible={showToast}
         onClose={() => setShowToast(false)}
+        type={toastType}
       />
       <ComponentCard title="Service Details">
         <div className="space-y-6">
@@ -112,12 +148,12 @@ export default function ServiceDetailsForm() {
             </div>
 
             <div>
-              <Label htmlFor="duration">Duration (minutes)</Label>
+              <Label htmlFor="duration">Duration</Label>
               <Input
                 id="duration"
                 name="duration"
-                type="number"
-                value={service.duration_minutes}
+                type="text"
+                value={service.duration_formatted}
                 readOnly
                 className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
               />
@@ -129,7 +165,31 @@ export default function ServiceDetailsForm() {
                 id="price"
                 name="price"
                 type="text"
-                value={`RM ${service.price}`}
+                value={service.price_formatted}
+                readOnly
+                className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="category">Category</Label>
+              <Input
+                id="category"
+                name="category"
+                type="text"
+                value={service.category}
+                readOnly
+                className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Input
+                id="status"
+                name="status"
+                type="text"
+                value={service.status_label}
                 readOnly
                 className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
               />
@@ -159,9 +219,10 @@ export default function ServiceDetailsForm() {
               size="sm"
               startIcon={<TrashBinIcon className="h-4 w-4" />}
               onClick={handleDelete}
-              className="bg-error-500 hover:bg-error-600 text-white !px-4 !py-3"
+              disabled={isDeleting}
+              className="bg-error-500 hover:bg-error-600 text-white !px-4 !py-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Delete
+              {isDeleting ? "Deleting..." : "Delete"}
             </Button>
             <Button
               variant="primary"

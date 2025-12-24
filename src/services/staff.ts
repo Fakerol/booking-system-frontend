@@ -66,10 +66,17 @@ export async function getStaffs(
     queryParams.append("search", params.search);
   }
   if (params?.is_active !== undefined) {
-    // Convert boolean to string if needed
-    const isActiveValue = typeof params.is_active === 'boolean' 
-      ? params.is_active.toString() 
-      : params.is_active.toString();
+    // Convert boolean to 1/0 or keep as string if already 1/0
+    let isActiveValue: string;
+    if (typeof params.is_active === 'boolean') {
+      isActiveValue = params.is_active ? '1' : '0';
+    } else if (typeof params.is_active === 'number') {
+      isActiveValue = params.is_active.toString();
+    } else {
+      // If it's already a string like "true"/"false", convert to 1/0
+      const str = params.is_active.toString().toLowerCase();
+      isActiveValue = (str === 'true' || str === '1') ? '1' : '0';
+    }
     queryParams.append("is_active", isActiveValue);
   }
   if (params?.position) {
