@@ -51,7 +51,7 @@ const generateDummyUsers = (): User[] => {
 
 export const userData: User[] = generateDummyUsers();
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 25;
 
 export default function UserTable() {
   const navigate = useNavigate();
@@ -166,22 +166,22 @@ export default function UserTable() {
           <Table className="w-full border-collapse">
             {/* Table Header */}
             <TableHeader>
-              <TableRow className="bg-gray-50 dark:bg-gray-800/50">
+              <TableRow className="bg-brand-50 dark:bg-brand-500/[0.12]">
                 <TableCell
                   isHeader
-                  className="w-12 border-b border-r border-gray-200 px-2 py-2.5 text-sm font-medium text-gray-700 text-center dark:border-gray-700 dark:text-gray-300"
+                  className="w-12 border-b border-r border-gray-200 px-2 py-2 text-xs font-medium text-gray-700 text-center dark:border-gray-700 dark:text-gray-300"
                 >
                   #
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                  className="border-b border-r border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Username
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="border-b border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                    className="border-b border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Role
                 </TableCell>
@@ -201,20 +201,20 @@ export default function UserTable() {
                     }`}
                   >
                     <td 
-                      className="w-12 border-r border-gray-200 px-2 py-3 text-sm text-gray-600 text-center dark:border-gray-700 dark:text-gray-400"
+                      className="w-12 border-r border-gray-200 px-2 py-1.5 text-xs text-gray-600 text-center dark:border-gray-700 dark:text-gray-400"
                     >
                       {startIndex + index + 1}
                     </td>
                     <td 
-                      className="border-r border-gray-200 px-3 py-3 text-start dark:border-gray-700"
+                      className="border-r border-gray-200 px-3 py-1.5 text-start dark:border-gray-700"
                       onClick={() => handleRowClick(user)}
                     >
-                      <span className="block text-sm font-medium text-gray-800 dark:text-white/90">
+                      <span className="block text-xs font-medium text-gray-800 dark:text-white/90">
                         {user.username}
                       </span>
                     </td>
                     <td 
-                      className="px-3 py-3 text-sm text-gray-600 text-start dark:text-gray-400"
+                      className="px-3 py-1.5 text-xs text-gray-600 text-start dark:text-gray-400"
                       onClick={() => handleRowClick(user)}
                     >
                       <Badge size="sm" color={getRoleColor(user.role) as any}>
@@ -227,7 +227,7 @@ export default function UserTable() {
                 <TableRow>
                   <td
                     colSpan={3}
-                    className="border-b border-gray-200 px-3 py-4 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
+                    className="border-b border-gray-200 px-3 py-2 text-center text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400"
                   >
                     No users found matching your filters.
                   </td>

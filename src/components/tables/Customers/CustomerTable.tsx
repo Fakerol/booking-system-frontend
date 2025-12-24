@@ -17,7 +17,7 @@ import { getCustomers, CustomerData } from "../../../services/customers";
 // Use CustomerData from API as the Customer interface
 export type Customer = CustomerData;
 
-const ITEMS_PER_PAGE = 15;
+const ITEMS_PER_PAGE = 25;
 
 export default function CustomerTable() {
   const navigate = useNavigate();
@@ -127,46 +127,46 @@ export default function CustomerTable() {
           <Table className="w-full border-collapse">
             {/* Table Header */}
             <TableHeader>
-              <TableRow className="bg-gray-50 dark:bg-gray-800/50">
+              <TableRow className="bg-brand-50 dark:bg-brand-500/[0.12]">
                 <TableCell
                   isHeader
-                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-center dark:border-gray-700 dark:text-gray-300"
+                  className="border-b border-r border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-center dark:border-gray-700 dark:text-gray-300"
                 >
                   #
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                  className="border-b border-r border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Name
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                  className="border-b border-r border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Email
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                  className="border-b border-r border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Phone
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                  className="border-b border-r border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Completed Bookings
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                  className="border-b border-r border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Loyalty Program
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="border-b border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                    className="border-b border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Status
                 </TableCell>
@@ -179,7 +179,7 @@ export default function CustomerTable() {
                 <TableRow>
                   <td
                     colSpan={7}
-                    className="border-b border-gray-200 px-3 py-4 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
+                    className="border-b border-gray-200 px-3 py-2 text-center text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400"
                   >
                     Loading customers...
                   </td>
@@ -188,7 +188,7 @@ export default function CustomerTable() {
                 <TableRow>
                   <td
                     colSpan={6}
-                    className="border-b border-gray-200 px-3 py-4 text-center text-sm text-red-500 dark:border-gray-700 dark:text-red-400"
+                    className="border-b border-gray-200 px-3 py-2 text-center text-xs text-red-500 dark:border-gray-700 dark:text-red-400"
                   >
                     {error}
                   </td>
@@ -204,38 +204,38 @@ export default function CustomerTable() {
                     }`}
                   >
                     <td 
-                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-center dark:border-gray-700 dark:text-gray-400"
+                      className="border-r border-gray-200 px-3 py-1.5 text-xs text-gray-600 text-center dark:border-gray-700 dark:text-gray-400"
                     >
                       {((pagination.current_page - 1) * pagination.per_page) + index + 1}
                     </td>
                     <td 
-                      className="border-r border-gray-200 px-3 py-3 text-start dark:border-gray-700"
+                      className="border-r border-gray-200 px-3 py-1.5 text-start dark:border-gray-700"
                       onClick={() => handleRowClick(customer)}
                     >
-                      <span className="block text-sm font-medium text-gray-800 dark:text-white/90">
+                      <span className="block text-xs font-medium text-gray-800 dark:text-white/90">
                         {customer.name}
                       </span>
                     </td>
                     <td 
-                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
+                      className="border-r border-gray-200 px-3 py-1.5 text-xs text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
                       onClick={() => handleRowClick(customer)}
                     >
                       {customer.email}
                     </td>
                     <td 
-                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
+                      className="border-r border-gray-200 px-3 py-1.5 text-xs text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
                       onClick={() => handleRowClick(customer)}
                     >
                       {customer.phone}
                     </td>
                     <td 
-                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
+                      className="border-r border-gray-200 px-3 py-1.5 text-xs text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
                       onClick={() => handleRowClick(customer)}
                     >
                       {customer.total_completed_bookings}
                     </td>
                     <td 
-                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
+                      className="border-r border-gray-200 px-3 py-1.5 text-xs text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
                       onClick={() => handleRowClick(customer)}
                     >
                       {customer.loyalty_program ? (
@@ -247,7 +247,7 @@ export default function CustomerTable() {
                       )}
                     </td>
                     <td 
-                      className="px-3 py-3 text-sm text-gray-600 text-start dark:text-gray-400"
+                      className="px-3 py-1.5 text-xs text-gray-600 text-start dark:text-gray-400"
                       onClick={() => handleRowClick(customer)}
                     >
                       <Badge 
@@ -263,7 +263,7 @@ export default function CustomerTable() {
                 <TableRow>
                   <td
                     colSpan={7}
-                    className="border-b border-gray-200 px-3 py-4 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
+                    className="border-b border-gray-200 px-3 py-2 text-center text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400"
                   >
                     No customers found matching your filters.
                   </td>

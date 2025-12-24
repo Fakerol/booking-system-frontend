@@ -6,51 +6,52 @@ import Input from "../form/input/InputField";
 import Button from "../ui/button/Button";
 import Badge from "../ui/badge/Badge";
 import { PencilIcon, TrashBinIcon } from "../../icons";
-import { Booking } from "../tables/Bookings/BookingTable";
 import Toast from "../ui/toast/Toast";
-
-import { bookingData } from "../tables/Bookings/BookingTable";
-
-// Mock function to fetch booking by ID (using dummy data)
-const fetchBookingById = (id: string): Booking | null => {
-  return bookingData.find((b: Booking) => b._id === id) || null;
-};
+import { getBookingById, BookingData } from "../../services/bookings";
 
 export default function BookingDetailsForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   
-  const [booking, setBooking] = useState<Booking | null>(null);
+  const [booking, setBooking] = useState<BookingData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
-    if (id) {
-      const foundBooking = fetchBookingById(id);
-      if (foundBooking) {
-        setBooking(foundBooking);
-      } else {
-        setError("Booking not found");
+    const fetchBooking = async () => {
+      if (id) {
+        setIsLoading(true);
+        setError(null);
+        
+        const response = await getBookingById(id);
+        
+        if (response.success && response.data) {
+          setBooking(response.data.booking);
+        } else {
+          setError(response.message || "Booking not found");
+        }
+        
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    }
+    };
+
+    fetchBooking();
   }, [id]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "confirmed":
-        return "success";
-      case "pending":
-        return "warning";
-      case "completed":
-        return "info";
-      case "cancelled":
-        return "error";
-      default:
-        return "primary";
+  const getStatusColor = (statusLabel: string) => {
+    const status = statusLabel.toLowerCase();
+    if (status === "pending") {
+      return "warning";
+    } else if (status === "confirmed") {
+      return "success";
+    } else if (status === "completed") {
+      return "info";
+    } else if (status === "cancelled") {
+      return "error";
     }
+    return "warning";
   };
 
   const handleEdit = () => {
@@ -116,12 +117,45 @@ export default function BookingDetailsForm() {
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
+              <Label htmlFor="booking_number">Booking Number</Label>
+              <Input
+                id="booking_number"
+                name="booking_number"
+                type="text"
+                value={booking.booking_number}
+                readOnly
+                className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <div className="mt-2">
+                <Badge size="sm" color={getStatusColor(booking.status_label) as any}>
+                  {booking.status_label}
+                </Badge>
+              </div>
+            </div>
+
+            <div>
               <Label htmlFor="customer_name">Customer Name</Label>
               <Input
                 id="customer_name"
                 name="customer_name"
                 type="text"
-                value={booking.customer_name}
+                value={booking.customer.name}
+                readOnly
+                className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="customer_phone">Customer Phone</Label>
+              <Input
+                id="customer_phone"
+                name="customer_phone"
+                type="text"
+                value={booking.customer.phone || "—"}
                 readOnly
                 className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
               />
@@ -133,7 +167,7 @@ export default function BookingDetailsForm() {
                 id="customer_email"
                 name="customer_email"
                 type="email"
-                value={booking.customer_email}
+                value={booking.customer.email || "—"}
                 readOnly
                 className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
               />
@@ -145,76 +179,101 @@ export default function BookingDetailsForm() {
                 id="staff_name"
                 name="staff_name"
                 type="text"
-                value={booking.staff_name}
+                value={booking.staff.name}
                 readOnly
                 className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
               />
             </div>
 
             <div>
-              <Label htmlFor="service_name">Service</Label>
+              <Label htmlFor="staff_position">Staff Position</Label>
               <Input
-                id="service_name"
-                name="service_name"
+                id="staff_position"
+                name="staff_position"
                 type="text"
-                value={booking.service_name}
+                value={booking.staff.position || "—"}
                 readOnly
                 className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
               />
             </div>
 
             <div>
-              <Label htmlFor="date">Date</Label>
+              <Label htmlFor="booking_date">Booking Date</Label>
               <Input
-                id="date"
-                name="date"
-                type="date"
-                value={booking.date}
+                id="booking_date"
+                name="booking_date"
+                type="text"
+                value={booking.booking_date_formatted || booking.booking_date}
                 readOnly
                 className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
               />
             </div>
 
             <div>
-              <Label htmlFor="time">Time</Label>
+              <Label htmlFor="time_range">Time Range</Label>
               <Input
-                id="time"
-                name="time"
-                type="time"
-                value={booking.time}
+                id="time_range"
+                name="time_range"
+                type="text"
+                value={booking.time_range}
                 readOnly
                 className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
               />
             </div>
 
             <div>
-              <Label htmlFor="status">Status</Label>
-              <div className="mt-2">
-                <Badge size="sm" color={getStatusColor(booking.status) as any}>
-                  {booking.status}
-                </Badge>
-              </div>
+              <Label htmlFor="total_price">Total Price</Label>
+              <Input
+                id="total_price"
+                name="total_price"
+                type="text"
+                value={booking.total_price_formatted}
+                readOnly
+                className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+              />
             </div>
 
-            {booking.is_free_appointment && (
-              <div>
-                <Label htmlFor="appointment_type">Appointment Type</Label>
-                <div className="mt-2">
-                  <Badge size="sm" color="success">
-                    Free Appointment
-                  </Badge>
+            {booking.services && booking.services.length > 0 && (
+              <div className="md:col-span-2">
+                <Label>Services</Label>
+                <div className="mt-2 space-y-2">
+                  {booking.services.map((service, index) => (
+                    <div
+                      key={index}
+                      className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-800 dark:text-white">
+                            {service.service.name}
+                          </p>
+                          {service.service.description && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {service.service.description}
+                            </p>
+                          )}
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Category: {service.service.category} • Duration: {service.duration_formatted}
+                          </p>
+                        </div>
+                        <p className="font-medium text-gray-800 dark:text-white">
+                          {service.price_formatted}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
 
-            {booking.original_price !== undefined && booking.is_free_appointment && (
-              <div>
-                <Label htmlFor="original_price">Original Price</Label>
+            {booking.notes && (
+              <div className="md:col-span-2">
+                <Label htmlFor="notes">Notes</Label>
                 <Input
-                  id="original_price"
-                  name="original_price"
+                  id="notes"
+                  name="notes"
                   type="text"
-                  value={`RM ${booking.original_price} (Free)`}
+                  value={booking.notes}
                   readOnly
                   className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
                 />

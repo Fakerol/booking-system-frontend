@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   Table,
@@ -13,141 +13,110 @@ import Input from "../../form/input/InputField";
 import Select from "../../form/Select";
 import { ChevronLeftIcon, AngleRightIcon } from "../../../icons";
 import Toast from "../../ui/toast/Toast";
+import { getBookings, BookingData, GetBookingsParams } from "../../../services/bookings";
 
-export interface Booking {
-  _id: string;
-  customer_name: string;
-  customer_email: string;
-  staff_name: string;
-  service_name: string;
-  date: string;
-  time: string;
-  status: "confirmed" | "pending" | "cancelled" | "completed";
-  is_free_appointment?: boolean;
-  original_price?: number;
-}
+// Export BookingData as Booking for backward compatibility with other components
+// TODO: Update other components to use BookingData from services/bookings directly
+export type Booking = BookingData;
 
-// Generate 50 dummy bookings
-const generateDummyBookings = (): Booking[] => {
-  const customerNames = [
-    "Fakhrul", "John Doe", "Jane Smith", "Bob Johnson", "Alice Williams",
-    "Charlie Brown", "Diana Prince", "Edward Lee", "Fiona Green", "George Wilson",
-    "Hannah Kim", "Isaac Newton", "Julia Roberts", "Kevin Hart", "Lisa Anderson",
-    "Michael Scott", "Nancy Drew", "Oliver Twist", "Patricia Star", "Quinn Taylor",
-    "Rachel Green", "Steve Jobs", "Tina Turner", "Uma Thurman", "Victor Chen",
-    "Wendy Davis", "Xavier Wood", "Yara Martinez", "Zoe Johnson", "Adam Smith",
-    "Bella Swan", "Chris Evans", "Diana Ross", "Ethan Hunt", "Faith Hill",
-    "Grace Kelly", "Harry Potter", "Iris West", "Jack Sparrow", "Kate Winslet",
-    "Leo DiCaprio", "Mia Wallace", "Noah Smith", "Olivia Pope", "Paul Walker",
-    "Quincy Jones", "Rose Tyler", "Sam Wilson", "Tara Reid", "Ulysses Grant"
-  ];
-
-  const customerEmails = customerNames.map(name => 
-    `${name.toLowerCase().replace(/\s+/g, '.')}@example.com`
-  );
-
-  const staffNames = ["Ahmad", "Sarah", "Mike", "Emma", "David"];
-  const services = ["Haircut", "Hair Color", "Hair Styling", "Beard Trim", "Shampoo"];
-  const statuses: ("confirmed" | "pending" | "cancelled" | "completed")[] = [
-    "confirmed", "pending", "cancelled", "completed"
-  ];
-  
-  const times = [
-    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30",
-    "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"
-  ];
-
-  const bookings: Booking[] = [];
-  
-  // Generate dates from past 30 days to future 15 days
-  const today = new Date();
-  const dates: string[] = [];
-  for (let i = -30; i <= 15; i++) {
-    const date = new Date(today);
-    date.setDate(date.getDate() + i);
-    dates.push(date.toISOString().split('T')[0]);
-  }
-
-  for (let i = 0; i < 50; i++) {
-    const randomDateIndex = Math.floor(Math.random() * dates.length);
-    const randomTimeIndex = Math.floor(Math.random() * times.length);
-    const randomStatusIndex = Math.floor(Math.random() * statuses.length);
-    const randomStaffIndex = Math.floor(Math.random() * staffNames.length);
-    const randomServiceIndex = Math.floor(Math.random() * services.length);
-    
-    // Randomly assign some bookings as free appointments (10% chance)
-    const isFreeAppointment = Math.random() < 0.1;
-    const servicePrices: Record<string, number> = {
-      "Haircut": 25,
-      "Hair Color": 50,
-      "Hair Styling": 35,
-      "Beard Trim": 15,
-      "Shampoo": 20,
-    };
-    
-    bookings.push({
-      _id: (i + 1).toString(),
-      customer_name: customerNames[i % customerNames.length],
-      customer_email: customerEmails[i % customerEmails.length],
-      staff_name: staffNames[randomStaffIndex],
-      service_name: services[randomServiceIndex],
-      date: dates[randomDateIndex],
-      time: times[randomTimeIndex],
-      status: statuses[randomStatusIndex],
-      is_free_appointment: isFreeAppointment,
-      original_price: isFreeAppointment ? servicePrices[services[randomServiceIndex]] : undefined,
-    });
-  }
-
-  return bookings;
-};
-
-export const bookingData: Booking[] = generateDummyBookings();
-
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 25;
 
 export default function BookingTable() {
   const navigate = useNavigate();
+  const [bookings, setBookings] = useState<BookingData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
   const [staffFilter, setStaffFilter] = useState("");
+  const [customerFilter, setCustomerFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
+  const [timeFilter, setTimeFilter] = useState("");
   const [showToast, setShowToast] = useState(false);
 
-  // Get unique staff names for filter
-  const uniqueStaffNames = useMemo(() => {
-    const staffSet = new Set(bookingData.map(b => b.staff_name));
-    return Array.from(staffSet).sort();
-  }, []);
+  // Debounce search term
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
-  // Filter bookings based on search and filters
-  const filteredBookings = useMemo(() => {
-    return bookingData.filter((booking) => {
-      const matchesSearch =
-        searchTerm === "" ||
-        booking.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.customer_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.service_name.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesStatus = statusFilter === "" || booking.status === statusFilter;
-      const matchesStaff = staffFilter === "" || booking.staff_name === staffFilter;
-      const matchesDate = dateFilter === "" || booking.date === dateFilter;
-
-      return matchesSearch && matchesStatus && matchesStaff && matchesDate;
-    });
-  }, [searchTerm, statusFilter, staffFilter, dateFilter]);
-
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedBookings = filteredBookings.slice(startIndex, endIndex);
-
-  // Reset to page 1 when filters change
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter, staffFilter, dateFilter]);
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch bookings when filters or page change
+  useEffect(() => {
+    fetchBookings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, statusFilter, staffFilter, customerFilter, dateFilter, startDateFilter, endDateFilter, timeFilter, debouncedSearchTerm]);
+
+  const fetchBookings = async () => {
+    setLoading(true);
+    setError(null);
+
+    const params: GetBookingsParams = {
+      per_page: ITEMS_PER_PAGE,
+      page: currentPage,
+    };
+
+    if (debouncedSearchTerm.trim()) {
+      params.search = debouncedSearchTerm.trim();
+    }
+
+    if (statusFilter !== "") {
+      params.status = parseInt(statusFilter);
+    }
+
+    if (staffFilter) {
+      params.staff_id = staffFilter;
+    }
+
+    if (customerFilter) {
+      params.customer_id = customerFilter;
+    }
+
+    if (dateFilter) {
+      params.booking_date = dateFilter;
+    }
+
+    if (startDateFilter) {
+      params.start_date = startDateFilter;
+    }
+
+    if (endDateFilter) {
+      params.end_date = endDateFilter;
+    }
+
+    if (timeFilter) {
+      params.time_filter = timeFilter;
+    }
+
+    const response = await getBookings(params);
+
+    if (response.success && response.data) {
+      // Sort by created_at descending (latest first)
+      const sortedBookings = [...response.data.bookings].sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateB - dateA; // Descending order (newest first)
+      });
+      setBookings(sortedBookings);
+      setTotalPages(response.data.pagination.last_page);
+      setTotal(response.data.pagination.total);
+    } else {
+      setError(response.message || "Failed to fetch bookings");
+      setBookings([]);
+    }
+
+    setLoading(false);
+  };
 
   const handlePrevious = () => {
     if (currentPage > 1) {
@@ -165,22 +134,27 @@ export default function BookingTable() {
     setCurrentPage(page);
   };
 
-  const handleRowClick = (booking: Booking) => {
-    navigate(`/bookings/${booking._id}`);
+  const handleRowClick = (booking: BookingData) => {
+    navigate(`/bookings/${booking.id}`);
   };
 
-  const handleEdit = (bookingId: string) => {
-    navigate(`/bookings/edit/${bookingId}`);
+  const getStatusBadgeColor = (statusLabel: string) => {
+    const status = statusLabel.toLowerCase();
+    if (status === "pending") {
+      return "warning";
+    } else if (status === "confirmed") {
+      return "success";
+    } else if (status === "completed") {
+      return "info";
+    } else if (status === "cancelled") {
+      return "error";
+    }
+    return "warning";
   };
 
-  const handleDelete = (bookingId: string) => {
-    // In a real app, this would call an API to delete the booking
-    console.log("Delete booking:", bookingId);
-    // For now, we'll just log it since we're using dummy data
-    setShowToast(true);
-    // In a real app, you would make an API call here
-    // After successful deletion, show the toast
-  };
+  // Calculate display range
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + bookings.length, total);
 
   return (
     <div className="space-y-4">
@@ -194,7 +168,7 @@ export default function BookingTable() {
             </label>
             <Input
               type="text"
-              placeholder="Search by name, email, or service..."
+              placeholder="Search by booking number, customer name/phone, or staff name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -209,44 +183,82 @@ export default function BookingTable() {
               placeholder="All Statuses"
               options={[
                 { value: "", label: "All Statuses" },
-                { value: "confirmed", label: "Confirmed" },
-                { value: "pending", label: "Pending" },
-                { value: "completed", label: "Completed" },
-                { value: "cancelled", label: "Cancelled" },
+                { value: "1", label: "Pending" },
+                { value: "2", label: "Confirmed" },
+                { value: "3", label: "Completed" },
+                { value: "4", label: "Cancelled" },
               ]}
               defaultValue=""
-              onChange={(value) => setStatusFilter(value)}
-            />
-          </div>
-
-          {/* Staff Filter */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Staff
-            </label>
-            <Select
-              placeholder="All Staff"
-              options={[
-                { value: "", label: "All Staff" },
-                ...uniqueStaffNames.map((staff) => ({
-                  value: staff,
-                  label: staff,
-                })),
-              ]}
-              defaultValue=""
-              onChange={(value) => setStaffFilter(value)}
+              onChange={(value) => {
+                setStatusFilter(value);
+                setCurrentPage(1);
+              }}
             />
           </div>
 
           {/* Date Filter */}
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Date
+              Booking Date
             </label>
             <Input
               type="date"
               value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
+              onChange={(e) => {
+                setDateFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+
+          {/* Time Filter */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Time Filter
+            </label>
+            <Select
+              placeholder="All Time"
+              options={[
+                { value: "", label: "All Time" },
+                { value: "upcoming", label: "Upcoming" },
+                { value: "past", label: "Past" },
+                { value: "today", label: "Today" },
+              ]}
+              defaultValue=""
+              onChange={(value) => {
+                setTimeFilter(value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Date Range Filters */}
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Start Date
+            </label>
+            <Input
+              type="date"
+              value={startDateFilter}
+              onChange={(e) => {
+                setStartDateFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              End Date
+            </label>
+            <Input
+              type="date"
+              value={endDateFilter}
+              onChange={(e) => {
+                setEndDateFilter(e.target.value);
+                setCurrentPage(1);
+              }}
             />
           </div>
         </div>
@@ -258,64 +270,89 @@ export default function BookingTable() {
           <Table className="w-full border-collapse">
             {/* Table Header */}
             <TableHeader>
-              <TableRow className="bg-gray-50 dark:bg-gray-800/50">
+              <TableRow className="bg-brand-50 dark:bg-brand-500/[0.12]">
                 <TableCell
                   isHeader
-                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-center dark:border-gray-700 dark:text-gray-300"
+                  className="border-b border-r border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-center dark:border-gray-700 dark:text-gray-300"
                 >
                   #
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                  className="border-b border-r border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                >
+                  Status
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="border-b border-r border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                >
+                  Booking Number
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="border-b border-r border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Customer Name
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                  className="border-b border-r border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
-                  Customer Email
+                  Customer Phone
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                  className="border-b border-r border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                >
+                  Booking Date
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="border-b border-r border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                >
+                  Start Time
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="border-b border-r border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                >
+                  Total Price
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="border-b border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
                 >
                   Staff
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
-                >
-                  Service
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
-                >
-                  Date
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="border-b border-r border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
-                >
-                  Time
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="border-b border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
-                >
-                  Status
                 </TableCell>
               </TableRow>
             </TableHeader>
 
             {/* Table Body */}
             <TableBody>
-              {paginatedBookings.length > 0 ? (
-                paginatedBookings.map((booking, index) => (
+              {loading ? (
+                <TableRow>
+                  <td
+                    colSpan={9}
+                    className="border-b border-gray-200 px-3 py-2 text-center text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400"
+                  >
+                    Loading bookings data...
+                  </td>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <td
+                    colSpan={9}
+                    className="border-b border-gray-200 px-3 py-2 text-center text-xs text-red-500 dark:border-gray-700 dark:text-red-400"
+                  >
+                    {error}
+                  </td>
+                </TableRow>
+              ) : bookings.length > 0 ? (
+                // Display bookings sorted by created_at descending (latest first)
+                bookings.map((booking, index) => (
                   <TableRow 
-                    key={booking._id}
+                    key={booking.id}
                     className={`cursor-pointer border-b border-gray-200 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/50 ${
                       index % 2 === 0 
                         ? "bg-white dark:bg-white/[0.02]" 
@@ -323,81 +360,74 @@ export default function BookingTable() {
                     }`}
                   >
                     <td 
-                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-center dark:border-gray-700 dark:text-gray-400"
+                      className="border-r border-gray-200 px-3 py-1.5 text-xs text-gray-600 text-center dark:border-gray-700 dark:text-gray-400"
                     >
                       {startIndex + index + 1}
                     </td>
                     <td 
-                      className="border-r border-gray-200 px-3 py-3 text-start dark:border-gray-700"
+                      className="border-r border-gray-200 px-3 py-1.5 text-start dark:border-gray-700"
                       onClick={() => handleRowClick(booking)}
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="block text-sm font-medium text-gray-800 dark:text-white/90">
-                          {booking.customer_name}
-                        </span>
-                        {booking.is_free_appointment && (
-                          <Badge size="sm" color="success">
-                            Free
-                          </Badge>
-                        )}
-                      </div>
-                    </td>
-                    <td 
-                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
-                      onClick={() => handleRowClick(booking)}
-                    >
-                      {booking.customer_email}
-                    </td>
-                    <td 
-                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
-                      onClick={() => handleRowClick(booking)}
-                    >
-                      {booking.staff_name}
-                    </td>
-                    <td 
-                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
-                      onClick={() => handleRowClick(booking)}
-                    >
-                      {booking.service_name}
-                    </td>
-                    <td 
-                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
-                      onClick={() => handleRowClick(booking)}
-                    >
-                      {booking.date}
-                    </td>
-                    <td 
-                      className="border-r border-gray-200 px-3 py-3 text-sm text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
-                      onClick={() => handleRowClick(booking)}
-                    >
-                      {booking.time}
-                    </td>
-                    <td 
-                      className="px-3 py-3 text-sm text-gray-600 text-start dark:text-gray-400"
-                      onClick={() => handleRowClick(booking)}
-                    >
-                      <Badge
-                        size="sm"
-                        color={
-                          booking.status === "confirmed"
-                            ? "success"
-                            : booking.status === "pending"
-                            ? "warning"
-                            : booking.status === "completed"
-                            ? "info"
-                            : "error"
-                        }
+                      <Badge 
+                        size="sm" 
+                        color={getStatusBadgeColor(booking.status_label)}
                       >
-                        {booking.status}
+                        {booking.status_label}
                       </Badge>
+                    </td>
+                    <td 
+                      className="border-r border-gray-200 px-3 py-1.5 text-start dark:border-gray-700"
+                      onClick={() => handleRowClick(booking)}
+                    >
+                      <span className="block text-xs font-medium text-gray-800 dark:text-white/90">
+                        {booking.booking_number}
+                      </span>
+                    </td>
+                    <td 
+                      className="border-r border-gray-200 px-3 py-1.5 text-start dark:border-gray-700"
+                      onClick={() => handleRowClick(booking)}
+                    >
+                      <span className="block text-xs font-medium text-gray-800 dark:text-white/90">
+                        {booking.customer.name}
+                      </span>
+                    </td>
+                    <td 
+                      className="border-r border-gray-200 px-3 py-1.5 text-xs text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
+                      onClick={() => handleRowClick(booking)}
+                    >
+                      {booking.customer.phone || "—"}
+                    </td>
+                    <td 
+                      className="border-r border-gray-200 px-3 py-1.5 text-xs text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
+                      onClick={() => handleRowClick(booking)}
+                    >
+                      {booking.booking_date}
+                    </td>
+                    <td 
+                      className="border-r border-gray-200 px-3 py-1.5 text-xs text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
+                      onClick={() => handleRowClick(booking)}
+                    >
+                      {booking.start_time}
+                    </td>
+                    <td 
+                      className="border-r border-gray-200 px-3 py-1.5 text-xs text-gray-600 text-start dark:border-gray-700 dark:text-gray-400"
+                      onClick={() => handleRowClick(booking)}
+                    >
+                      {booking.total_price_formatted}
+                    </td>
+                    <td 
+                      className="px-3 py-1.5 text-xs text-gray-600 text-start dark:text-gray-400"
+                      onClick={() => handleRowClick(booking)}
+                    >
+                      {booking.staff.name}
                     </td>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
                   <td
-                    colSpan={8}
-                    className="border-b border-gray-200 px-3 py-4 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
+                    colSpan={9}
+                    className="border-b border-gray-200 px-3 py-2 text-center text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400"
                   >
                     No bookings found matching your filters.
                   </td>
@@ -409,14 +439,14 @@ export default function BookingTable() {
       </div>
 
       {/* Pagination */}
-      {totalPages > 0 && (
+      {totalPages > 0 && !loading && (
         <div className="flex flex-col items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-white/[0.05] dark:bg-white/[0.03] sm:flex-row">
           <div className="text-sm text-gray-700 dark:text-gray-300">
             Showing{" "}
             <span className="font-medium">
-              {startIndex + 1} to {Math.min(endIndex, filteredBookings.length)}
+              {startIndex + 1} to {endIndex}
             </span>{" "}
-            of <span className="font-medium">{filteredBookings.length}</span>{" "}
+            of <span className="font-medium">{total}</span>{" "}
             results
           </div>
 
@@ -490,5 +520,3 @@ export default function BookingTable() {
     </div>
   );
 }
-
-

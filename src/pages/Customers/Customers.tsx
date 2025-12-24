@@ -18,7 +18,7 @@ export default function Customers() {
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold text-gray-800 dark:text-white">
             All Customers
-          </h2>
+          </h2> 
           <Link to="/customers/new" className="inline-flex">
             <Button 
               variant="primary" 
@@ -31,7 +31,7 @@ export default function Customers() {
           </Link>
         </div>
         <ComponentCard title="All Customers">
-          <CustomerTable />
+         <CustomerTable />
         </ComponentCard>
       </div>
     </>

@@ -8,416 +8,295 @@ import Select from "../form/Select";
 import DatePicker from "../form/date-picker";
 import Button from "../ui/button/Button";
 import Toast from "../ui/toast/Toast";
-import Badge from "../ui/badge/Badge";
-import { Customer } from "../tables/Customers/CustomerTable";
-import { Booking } from "../tables/Bookings/BookingTable";
 import SearchableSelect from "../form/SearchableSelect";
 import CreateCustomerModal from "../modals/CreateCustomerModal";
+import { TrashBinIcon } from "../../icons";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
+import { getCustomers, CustomerData } from "../../services/customers";
+import { getStaffs, StaffData } from "../../services/staff";
+import { getServices, ServiceData } from "../../services/services";
+import { createBooking, CreateBookingPayload, getTimeSlots, TimeSlot } from "../../services/bookings";
 
 interface BookingFormData {
-  customer_name: string;
-  customer_email: string;
-  staff_name: string;
-  service_name: string;
-  date: string;
-  time: string;
-  status: "confirmed" | "pending" | "cancelled" | "completed";
-  is_free_appointment: boolean;
+  customer_id: string;
+  staff_id: string;
+  booking_date: string;
+  start_time: string;
+  services: string[];
+  notes: string;
+  status: number;
 }
-
-// Mock function to get all customers (in real app, this would be an API call)
-const getAllCustomers = (): Customer[] => {
-  // Import customer data generation logic
-  const firstNames = [
-    "John", "Jane", "Bob", "Alice", "Charlie", "Diana", "Edward", "Fiona",
-    "George", "Hannah", "Isaac", "Julia", "Kevin", "Lisa", "Michael", "Nancy",
-    "Oliver", "Patricia", "Quinn", "Rachel", "Steve", "Tina", "Uma", "Victor",
-    "Wendy", "Xavier", "Yara", "Zoe", "Adam", "Bella"
-  ];
-
-  const lastNames = [
-    "Doe", "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller",
-    "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Wilson", "Anderson",
-    "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Thompson", "White",
-    "Harris", "Sanchez", "Clark", "Ramirez", "Lewis", "Robinson", "Walker"
-  ];
-
-  const customers: Customer[] = [];
-  
-  for (let i = 0; i < 30; i++) {
-    const firstName = firstNames[i % firstNames.length];
-    const lastName = lastNames[i % lastNames.length];
-    const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`;
-    const phone = `+1${Math.floor(Math.random() * 9000000000) + 1000000000}`;
-    
-    // Generate random loyalty data
-    const completedBookings = Math.floor(Math.random() * 15);
-    const freeAppointmentAvailable = completedBookings >= 10;
-    
-    customers.push({
-      _id: (i + 1).toString(),
-      first_name: firstName,
-      last_name: lastName,
-      phone: phone,
-      email: email,
-      completed_bookings_count: completedBookings,
-      free_appointment_available: freeAppointmentAvailable,
-      total_free_appointments_used: Math.floor(completedBookings / 10),
-    });
-  }
-
-  return customers;
-};
-
-// Mock function to get customer by email
-const getCustomerByEmail = (email: string): Customer | null => {
-  const customers = getAllCustomers();
-  return customers.find(c => c.email === email) || null;
-};
-
-
-// Mock function to get service price
-const getServicePrice = (serviceName: string): number => {
-  const servicePrices: Record<string, number> = {
-    "Haircut": 25,
-    "Hair Color": 50,
-    "Hair Styling": 35,
-    "Beard Trim": 15,
-    "Shampoo": 20,
-  };
-  return servicePrices[serviceName] || 0;
-};
-
-// Mock function to get service duration
-const getServiceDuration = (serviceName: string): number => {
-  const serviceDurations: Record<string, number> = {
-    "Haircut": 30,
-    "Hair Color": 90,
-    "Hair Styling": 60,
-    "Beard Trim": 15,
-    "Shampoo": 20,
-  };
-  return serviceDurations[serviceName] || 30; // Default to 30 minutes
-};
-
-// Mock function to generate dummy bookings (same as in BookingTable)
-const generateDummyBookings = (): Booking[] => {
-  const staffNames = ["Ahmad", "Sarah", "Mike", "Emma", "David"];
-  const services = ["Haircut", "Hair Color", "Hair Styling", "Beard Trim", "Shampoo"];
-  const statuses: ("confirmed" | "pending" | "cancelled" | "completed")[] = [
-    "confirmed", "pending", "cancelled", "completed"
-  ];
-  const times = [
-    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30",
-    "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"
-  ];
-
-  const bookings: Booking[] = [];
-  const today = new Date();
-  const dates: string[] = [];
-  for (let i = -30; i <= 15; i++) {
-    const date = new Date(today);
-    date.setDate(date.getDate() + i);
-    dates.push(date.toISOString().split('T')[0]);
-  }
-
-  for (let i = 0; i < 50; i++) {
-    const randomDateIndex = Math.floor(Math.random() * dates.length);
-    const randomTimeIndex = Math.floor(Math.random() * times.length);
-    const randomStatusIndex = Math.floor(Math.random() * statuses.length);
-    const randomStaffIndex = Math.floor(Math.random() * staffNames.length);
-    const randomServiceIndex = Math.floor(Math.random() * services.length);
-    
-    bookings.push({
-      _id: (i + 1).toString(),
-      customer_name: `Customer ${i + 1}`,
-      customer_email: `customer${i + 1}@example.com`,
-      staff_name: staffNames[randomStaffIndex],
-      service_name: services[randomServiceIndex],
-      date: dates[randomDateIndex],
-      time: times[randomTimeIndex],
-      status: statuses[randomStatusIndex],
-      is_free_appointment: false,
-    });
-  }
-
-  return bookings;
-};
-
-// Mock function to get existing bookings (in real app, this would be an API call)
-const getExistingBookings = (staffName: string, date: string): Booking[] => {
-  // In a real app, this would be: GET /api/bookings?staff={staffName}&date={date}&status=confirmed,pending
-  const allBookings = generateDummyBookings();
-  
-  return allBookings.filter(
-    (booking: Booking) =>
-      booking.staff_name === staffName &&
-      booking.date === date &&
-      (booking.status === "confirmed" || booking.status === "pending")
-  );
-};
-
-// Convert time string (HH:MM) to minutes since midnight
-const timeToMinutes = (time: string): number => {
-  const [hours, minutes] = time.split(":").map(Number);
-  return hours * 60 + minutes;
-};
-
-// Check if a time slot is available
-const isTimeSlotAvailable = (
-  timeSlot: string,
-  serviceDuration: number,
-  existingBookings: Booking[]
-): boolean => {
-  const slotStart = timeToMinutes(timeSlot);
-  const slotEnd = slotStart + serviceDuration;
-
-  // Check against all existing bookings
-  for (const booking of existingBookings) {
-    const bookingStart = timeToMinutes(booking.time);
-    // Get service duration for existing booking
-    const bookingDuration = getServiceDuration(booking.service_name);
-    const bookingEnd = bookingStart + bookingDuration;
-
-    // Check for overlap: new slot overlaps if it starts before existing ends AND ends after existing starts
-    if (slotStart < bookingEnd && slotEnd > bookingStart) {
-      return false; // Time slot is blocked
-    }
-  }
-
-  return true; // Time slot is available
-};
-
-// Get all available time slots
-const getAvailableTimeSlots = (
-  staffName: string,
-  date: string,
-  serviceDuration: number
-): string[] => {
-  // All possible time slots (9:00 AM to 5:00 PM, every 30 minutes)
-  const allTimeSlots = [
-    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
-    "15:00", "15:30", "16:00", "16:30", "17:00"
-  ];
-
-  // Get existing bookings for this staff and date
-  const existingBookings = getExistingBookings(staffName, date);
-
-  // Filter time slots that are available
-  return allTimeSlots.filter((timeSlot) => {
-    // Check if the service would end before closing time (5:30 PM)
-    const slotStart = timeToMinutes(timeSlot);
-    const slotEnd = slotStart + serviceDuration;
-    const closingTime = timeToMinutes("17:30"); // 5:30 PM closing
-
-    // Check if service fits within business hours
-    if (slotEnd > closingTime) {
-      return false;
-    }
-
-    // Check if time slot conflicts with existing bookings
-    return isTimeSlotAvailable(timeSlot, serviceDuration, existingBookings);
-  });
-};
 
 export default function BookingForm() {
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState<BookingFormData>({
-    customer_name: "",
-    customer_email: "",
-    staff_name: "",
-    service_name: "",
-    date: "",
-    time: "",
-    status: "pending",
-    is_free_appointment: false,
+    customer_id: "",
+    staff_id: "",
+    booking_date: "",
+    start_time: "",
+    services: [],
+    notes: "",
+    status: 1, // Default to Pending
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof BookingFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showToast, setShowToast] = useState(false);
-  const [customerData, setCustomerData] = useState<Customer | null>(null);
+  const [toastMessage, setToastMessage] = useState("");
   const [isCreateCustomerModalOpen, setIsCreateCustomerModalOpen] = useState(false);
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"service" | "professional" | "customer" | "summary">("service");
 
-  // State to track customers (will be updated when new customer is created)
-  const [customers, setCustomers] = useState<Customer[]>(() => getAllCustomers());
+  // Data from APIs
+  const [customers, setCustomers] = useState<CustomerData[]>([]);
+  const [staffs, setStaffs] = useState<StaffData[]>([]);
+  const [services, setServices] = useState<ServiceData[]>([]);
+  
+  // Time slots from API
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+  const [timeSlotsError, setTimeSlotsError] = useState<string | null>(null);
+  const [staffAvailabilityReason, setStaffAvailabilityReason] = useState<string | null>(null);
 
-  // Get all customers for the searchable dropdown
-  const allCustomers = useMemo(() => customers, [customers]);
+  // Fetch customers on mount
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      const response = await getCustomers({
+        per_page: 100,
+        status: 1, // Only active customers
+      });
+      if (response.success && response.data) {
+        setCustomers(response.data.customers);
+      }
+    };
+    fetchCustomers();
+  }, []);
+
+  // Fetch staffs on mount
+  useEffect(() => {
+    const fetchStaffs = async () => {
+      const response = await getStaffs({
+        per_page: 100,
+        is_active: true,
+      });
+      if (response.success && response.data) {
+        setStaffs(response.data.staffs);
+      }
+    };
+    fetchStaffs();
+  }, []);
+
+  // Fetch services on mount
+  useEffect(() => {
+    const fetchServices = async () => {
+      const response = await getServices({
+        per_page: 100,
+        is_active: true,
+      });
+      if (response.success && response.data) {
+        setServices(response.data.services);
+      }
+    };
+    fetchServices();
+  }, []);
+
+  // Fetch time slots when staff, date, or services change
+  useEffect(() => {
+    const fetchTimeSlots = async () => {
+      if (!formData.staff_id || !formData.booking_date || formData.services.length === 0) {
+        setTimeSlots([]);
+        setStaffAvailabilityReason(null);
+        setTimeSlotsError(null);
+        return;
+      }
+
+      setLoadingTimeSlots(true);
+      setTimeSlotsError(null);
+      setStaffAvailabilityReason(null);
+
+      try {
+        const response = await getTimeSlots({
+          staff_id: formData.staff_id,
+          date: formData.booking_date,
+          service_ids: formData.services,
+        });
+
+        if (response.success && response.data) {
+          if (response.data.available) {
+            setTimeSlots(response.data.slots);
+            setStaffAvailabilityReason(null);
+          } else {
+            setTimeSlots([]);
+            setStaffAvailabilityReason(response.data.reason || "Staff is not available");
+          }
+        } else {
+          setTimeSlots([]);
+          setTimeSlotsError(response.message || "Failed to fetch available time slots");
+        }
+      } catch (error) {
+        setTimeSlots([]);
+        setTimeSlotsError("An error occurred while fetching time slots");
+      } finally {
+        setLoadingTimeSlots(false);
+      }
+    };
+
+    fetchTimeSlots();
+  }, [formData.staff_id, formData.booking_date, formData.services]);
+
+  // Clear selected time when time slots change
+  useEffect(() => {
+    if (formData.start_time && timeSlots.length > 0) {
+      const isTimeStillAvailable = timeSlots.some(
+        (slot) => slot.start_time === formData.start_time
+      );
+      if (!isTimeStillAvailable) {
+        setFormData((prev) => ({ ...prev, start_time: "" }));
+      }
+    } else if (formData.start_time && timeSlots.length === 0 && !loadingTimeSlots) {
+      // Clear time if no slots available
+      setFormData((prev) => ({ ...prev, start_time: "" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeSlots, loadingTimeSlots]);
 
   // Customer options for searchable select
   const customerOptions = useMemo(() => {
-    return allCustomers.map((customer) => ({
-      value: customer._id,
-      label: `${customer.first_name} ${customer.last_name}`,
+    return customers.map((customer) => ({
+      value: customer.id,
+      label: customer.name,
       searchText: `${customer.email} • ${customer.phone}`,
     }));
-  }, [allCustomers]);
+  }, [customers]);
 
-  // Handle new customer creation
-  const handleCustomerCreated = (newCustomer: Customer) => {
-    // Add new customer to the list
-    setCustomers((prev) => [...prev, newCustomer]);
-    // Auto-select the newly created customer
-    handleCustomerSelect(newCustomer._id);
-  };
+  // Staff options for searchable select
+  const staffOptions = useMemo(() => {
+    return staffs.map((staff) => ({
+      value: staff.id,
+      label: staff.name,
+      searchText: `${staff.position} • ${staff.phone}`,
+    }));
+  }, [staffs]);
+
+  // Service options for searchable select (filter out already selected services)
+  const serviceOptions = useMemo(() => {
+    return services
+      .filter((service) => !formData.services.includes(service.id))
+      .map((service) => ({
+        value: service.id,
+        label: service.name,
+        searchText: `${service.price_formatted} • ${service.duration_formatted} • ${service.category}`,
+      }));
+  }, [services, formData.services]);
+
+  // Get selected customer
+  const selectedCustomer = useMemo(() => {
+    return customers.find((c) => c.id === formData.customer_id) || null;
+  }, [customers, formData.customer_id]);
+
+  // Get selected services and calculate total price
+  const selectedServicesData = useMemo(() => {
+    return formData.services
+      .map((serviceId) => services.find((s) => s.id === serviceId))
+      .filter((s): s is ServiceData => s !== undefined);
+  }, [formData.services, services]);
+
+  const totalPrice = useMemo(() => {
+    return selectedServicesData.reduce((sum, service) => {
+      const price = typeof service.price === "string" ? parseFloat(service.price) : service.price;
+      return sum + price;
+    }, 0);
+  }, [selectedServicesData]);
+
+  const totalDuration = useMemo(() => {
+    return selectedServicesData.reduce((sum, service) => sum + service.duration, 0);
+  }, [selectedServicesData]);
 
   // Handle customer selection
   const handleCustomerSelect = (customerId: string) => {
-    const customer = allCustomers.find(c => c._id === customerId);
-    if (customer) {
-      setFormData((prev) => ({
-        ...prev,
-        customer_name: `${customer.first_name} ${customer.last_name}`,
-        customer_email: customer.email,
-      }));
-      // Set customer data immediately when selected from dropdown
-      setCustomerData(customer);
+    setFormData((prev) => ({ ...prev, customer_id: customerId }));
+    if (errors.customer_id) {
+      setErrors((prev) => ({ ...prev, customer_id: undefined }));
     }
   };
 
-  // Check customer loyalty status when email changes (for manual email entry)
-  // Only update if customerData doesn't match the email (to avoid overriding dropdown selection)
-  useEffect(() => {
-    if (formData.customer_email) {
-      // Check if current customerData matches the email - if it does, don't override
-      if (customerData && customerData.email === formData.customer_email) {
-        return; // Customer data already matches, don't override
-      }
-      
-      // Try to find customer from the current customers list first
-      const customer = allCustomers.find(c => c.email === formData.customer_email);
-      if (customer) {
-        setCustomerData(customer);
-      } else {
-        // Fallback to getCustomerByEmail if not found in current list
-        const customerFromEmail = getCustomerByEmail(formData.customer_email);
-        if (customerFromEmail) {
-          setCustomerData(customerFromEmail);
-        } else {
-          // If no customer found, clear customerData
-          setCustomerData(null);
-        }
-      }
-    } else {
-      setCustomerData(null);
+  // Handle staff selection
+  const handleStaffSelect = (staffId: string) => {
+    setFormData((prev) => ({ ...prev, staff_id: staffId }));
+    if (errors.staff_id) {
+      setErrors((prev) => ({ ...prev, staff_id: undefined }));
     }
-  }, [formData.customer_email, allCustomers, customerData]);
+  };
 
-  // Calculate booking price
-  const bookingPrice = useMemo(() => {
-    if (!formData.service_name) return 0;
-    const servicePrice = getServicePrice(formData.service_name);
-    if (formData.is_free_appointment && customerData?.free_appointment_available) {
-      return 0;
-    }
-    return servicePrice;
-  }, [formData.service_name, formData.is_free_appointment, customerData]);
-
-  // Mock data for staff and services
-  const staffOptions = [
-    { value: "", label: "Select Staff" },
-    { value: "Ahmad", label: "Ahmad" },
-    { value: "Sarah", label: "Sarah" },
-    { value: "Mike", label: "Mike" },
-    { value: "Emma", label: "Emma" },
-    { value: "David", label: "David" },
-  ];
-
-  const serviceOptions = [
-    { value: "", label: "Select Service" },
-    { value: "Haircut", label: "Haircut" },
-    { value: "Hair Color", label: "Hair Color" },
-    { value: "Hair Styling", label: "Hair Styling" },
-    { value: "Beard Trim", label: "Beard Trim" },
-    { value: "Shampoo", label: "Shampoo" },
-  ];
-
-  const statusOptions = [
-    { value: "pending", label: "Pending" },
-    { value: "confirmed", label: "Confirmed" },
-    { value: "completed", label: "Completed" },
-    { value: "cancelled", label: "Cancelled" },
-  ];
-
-  // Get available time slots based on selected staff, date, and service
-  const availableTimeSlots = useMemo(() => {
-    if (!formData.staff_name || !formData.date || !formData.service_name) {
-      return [{ value: "", label: "Select Time" }];
-    }
-
-    const serviceDuration = getServiceDuration(formData.service_name);
-    const availableSlots = getAvailableTimeSlots(
-      formData.staff_name,
-      formData.date,
-      serviceDuration
-    );
-
-    return [
-      { value: "", label: "Select Time" },
-      ...availableSlots.map((time) => ({
-        value: time,
-        label: time,
-      })),
-    ];
-  }, [formData.staff_name, formData.date, formData.service_name]);
-
-  // Reset time selection when date, staff, or service changes
-  useEffect(() => {
-    if (formData.time) {
-      // Check if current selected time is still available
-      const isStillAvailable = availableTimeSlots.some(
-        (slot) => slot.value === formData.time
-      );
-      if (!isStillAvailable) {
-        setFormData((prev) => ({ ...prev, time: "" }));
+  // Handle service selection (add to list)
+  const handleServiceSelect = (serviceId: string) => {
+    if (serviceId && !formData.services.includes(serviceId)) {
+      setFormData((prev) => ({ ...prev, services: [...prev.services, serviceId] }));
+      if (errors.services) {
+        setErrors((prev) => ({ ...prev, services: undefined }));
       }
     }
-  }, [formData.staff_name, formData.date, formData.service_name, availableTimeSlots]);
+  };
+
+  // Handle service removal from table
+  const handleServiceRemove = (serviceId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      services: prev.services.filter((id) => id !== serviceId),
+    }));
+  };
+
+  // Handle new customer creation
+  const handleCustomerCreated = (newCustomer: CustomerData) => {
+    // Add new customer to the list
+    setCustomers((prev) => [...prev, newCustomer]);
+    // Auto-select the newly created customer
+    handleCustomerSelect(newCustomer.id);
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof BookingFormData, string>> = {};
 
-    if (!formData.customer_name.trim()) {
-      newErrors.customer_name = "Customer name is required";
+    if (!formData.customer_id) {
+      newErrors.customer_id = "Please select a customer";
     }
 
-    if (!formData.customer_email.trim()) {
-      newErrors.customer_email = "Customer email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.customer_email)) {
-      newErrors.customer_email = "Please enter a valid email address";
+    if (!formData.staff_id) {
+      newErrors.staff_id = "Please select a staff member";
     }
 
-    if (!formData.staff_name) {
-      newErrors.staff_name = "Please select a staff member";
-    }
-
-    if (!formData.service_name) {
-      newErrors.service_name = "Please select a service";
-    }
-
-    if (!formData.date) {
-      newErrors.date = "Please select a date";
+    if (!formData.booking_date) {
+      newErrors.booking_date = "Please select a date";
     } else {
-      const selectedDate = new Date(formData.date);
+      const selectedDate = new Date(formData.booking_date);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (selectedDate < today) {
-        newErrors.date = "Please select a date today or in the future";
+        newErrors.booking_date = "Please select a date today or in the future";
       }
     }
 
-    if (!formData.time) {
-      newErrors.time = "Please select a time";
+    if (!formData.start_time) {
+      newErrors.start_time = "Please select a start time";
+    }
+
+    if (!formData.services || formData.services.length === 0) {
+      newErrors.services = "Please select at least one service";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (field: keyof BookingFormData, value: string) => {
+  const handleInputChange = (field: keyof BookingFormData, value: string | string[] | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error for this field when user starts typing
     if (errors[field]) {
@@ -425,7 +304,7 @@ export default function BookingForm() {
     }
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -434,276 +313,656 @@ export default function BookingForm() {
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      const bookingData = {
-        ...formData,
-        original_price: formData.is_free_appointment ? getServicePrice(formData.service_name) : bookingPrice,
+    try {
+      const payload: CreateBookingPayload = {
+        customer_id: formData.customer_id,
+        staff_id: formData.staff_id,
+        booking_date: formData.booking_date,
+        start_time: formData.start_time,
+        services: formData.services,
+        notes: formData.notes || undefined,
+        status: formData.status,
       };
-      console.log("Booking created:", bookingData);
-      
-      // Here you would typically make an API call to create the booking
-      // If free appointment is used, you would also update customer's free_appointment_available flag
-      setIsSubmitting(false);
+
+      const response = await createBooking(payload);
+
+      if (response.success) {
+        setToastMessage("Booking created successfully!");
+        setShowToast(true);
+        setTimeout(() => {
+          navigate("/bookings");
+        }, 2000);
+      } else {
+        setToastMessage(response.message || "Failed to create booking");
+        setShowToast(true);
+        setIsSubmitting(false);
+      }
+    } catch (error) {
+      setToastMessage("An error occurred while creating the booking");
       setShowToast(true);
-      
-      // Navigate after showing toast
-      setTimeout(() => {
-        navigate("/bookings");
-      }, 3100);
-    }, 1000);
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
     navigate("/bookings");
   };
 
+  // Format time options from API response
+  const timeOptions = useMemo(() => {
+    if (timeSlots.length === 0) {
+      return [{ value: "", label: "No available time slots" }];
+    }
+    return timeSlots.map((slot) => ({
+      value: slot.start_time,
+      label: slot.formatted || slot.start_time,
+    }));
+  }, [timeSlots]);
+
+  // Tab validation - check if tab can be accessed
+  const canAccessTab = (tab: typeof activeTab): boolean => {
+    switch (tab) {
+      case "service":
+        return true; // Always accessible
+      case "professional":
+        return formData.services.length > 0; // Need at least one service
+      case "customer":
+        return (
+          formData.services.length > 0 &&
+          formData.staff_id !== "" &&
+          formData.booking_date !== "" &&
+          formData.start_time !== ""
+        ); // Need services, staff, date, and time
+      case "summary":
+        return (
+          formData.services.length > 0 &&
+          formData.staff_id !== "" &&
+          formData.booking_date !== "" &&
+          formData.start_time !== "" &&
+          formData.customer_id !== ""
+        ); // Need all required fields
+      default:
+        return false;
+    }
+  };
+
+  // Get selected staff
+  const selectedStaff = useMemo(() => {
+    return staffs.find((s) => s.id === formData.staff_id) || null;
+  }, [staffs, formData.staff_id]);
+
+  // Handle tab navigation
+  const handleNextTab = () => {
+    const tabs: Array<typeof activeTab> = ["service", "professional", "customer", "summary"];
+    const currentIndex = tabs.indexOf(activeTab);
+    if (currentIndex < tabs.length - 1) {
+      const nextTab = tabs[currentIndex + 1];
+      if (canAccessTab(nextTab)) {
+        setActiveTab(nextTab);
+      }
+    }
+  };
+
+  const handlePreviousTab = () => {
+    const tabs: Array<typeof activeTab> = ["service", "professional", "customer", "summary"];
+    const currentIndex = tabs.indexOf(activeTab);
+    if (currentIndex > 0) {
+      setActiveTab(tabs[currentIndex - 1]);
+    }
+  };
+
+  const handleTabClick = (tab: typeof activeTab) => {
+    if (canAccessTab(tab)) {
+      setActiveTab(tab);
+    }
+  };
+
+  // Helper function to get next tab
+  const getNextTab = (currentTab: typeof activeTab): typeof activeTab => {
+    const tabs: Array<typeof activeTab> = ["service", "professional", "customer", "summary"];
+    const currentIndex = tabs.indexOf(currentTab);
+    return currentIndex < tabs.length - 1 ? tabs[currentIndex + 1] : currentTab;
+  };
+
   return (
     <>
       <Toast
-        message="Booking created successfully!"
+        message={toastMessage}
         isVisible={showToast}
         onClose={() => setShowToast(false)}
       />
       <ComponentCard title="Create New Booking">
         <Form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {/* Customer Selection - Searchable Dropdown */}
-          <div>
-            <Label htmlFor="customer_select">Customer *</Label>
-            <SearchableSelect
-              options={customerOptions}
-              placeholder="Search customer by name, email, or phone..."
-              searchPlaceholder="Search customers..."
-              onChange={handleCustomerSelect}
-              defaultValue=""
-              onAddNew={() => setIsCreateCustomerModalOpen(true)}
-              showAddButton={true}
-            />
-            {errors.customer_name && (
-              <p className="mt-1.5 text-xs text-error-500">{errors.customer_name}</p>
-            )}
+          {/* Tab Navigation */}
+          <div className="mb-6">
+            <div className="flex items-center gap-0.5 rounded-lg bg-gray-100 p-0.5 dark:bg-gray-900">
+              <button
+                type="button"
+                onClick={() => handleTabClick("service")}
+                className={`px-3 py-2 font-medium rounded-md text-sm transition-colors flex-1 ${
+                  activeTab === "service"
+                    ? "shadow-theme-xs text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                1. Service
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTabClick("professional")}
+                disabled={!canAccessTab("professional")}
+                className={`px-3 py-2 font-medium rounded-md text-sm transition-colors flex-1 ${
+                  activeTab === "professional"
+                    ? "shadow-theme-xs text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                    : !canAccessTab("professional")
+                    ? "text-gray-400 dark:text-gray-600 cursor-not-allowed"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                2. Professional & Date
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTabClick("customer")}
+                disabled={!canAccessTab("customer")}
+                className={`px-3 py-2 font-medium rounded-md text-sm transition-colors flex-1 ${
+                  activeTab === "customer"
+                    ? "shadow-theme-xs text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                    : !canAccessTab("customer")
+                    ? "text-gray-400 dark:text-gray-600 cursor-not-allowed"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                3. Customer & Details
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTabClick("summary")}
+                disabled={!canAccessTab("summary")}
+                className={`px-3 py-2 font-medium rounded-md text-sm transition-colors flex-1 ${
+                  activeTab === "summary"
+                    ? "shadow-theme-xs text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                    : !canAccessTab("summary")
+                    ? "text-gray-400 dark:text-gray-600 cursor-not-allowed"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                4. Summary
+              </button>
+            </div>
           </div>
 
-          {/* Customer Name (Read-only, auto-filled) */}
-          <div>
-            <Label htmlFor="customer_name">Customer Name *</Label>
-            <Input
-              id="customer_name"
-              name="customer_name"
-              type="text"
-              placeholder="Select customer above"
-              value={formData.customer_name}
-              onChange={(e) => handleInputChange("customer_name", e.target.value)}
-              error={!!errors.customer_name}
-              hint={errors.customer_name}
-              readOnly
-              className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
-            />
-          </div>
-
-          {/* Customer Email (Read-only, auto-filled) */}
-          <div>
-            <Label htmlFor="customer_email">Customer Email *</Label>
-            <Input
-              id="customer_email"
-              name="customer_email"
-              type="email"
-              placeholder="Select customer above"
-              value={formData.customer_email}
-              onChange={(e) => handleInputChange("customer_email", e.target.value)}
-              error={!!errors.customer_email}
-              hint={errors.customer_email}
-              readOnly
-              className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
-            />
-          </div>
-
-          {/* Customer Phone (Read-only, auto-filled) */}
-          <div>
-            <Label htmlFor="customer_phone">Phone Number</Label>
-            <Input
-              id="customer_phone"
-              name="customer_phone"
-              type="tel"
-              placeholder="Select customer above"
-              value={customerData?.phone || ""}
-              readOnly
-              className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
-            />
-          </div>
-
-          {/* Staff Selection */}
-          <div>
-            <Label htmlFor="staff_name">Staff *</Label>
-            <Select
-              options={staffOptions}
-              placeholder="Select Staff"
-              onChange={(value) => handleInputChange("staff_name", value)}
-              defaultValue=""
-            />
-            {errors.staff_name && (
-              <p className="mt-1.5 text-xs text-error-500">{errors.staff_name}</p>
-            )}
-          </div>
-
-          {/* Service Selection */}
-          <div>
-            <Label htmlFor="service_name">Service *</Label>
-            <Select
-              options={serviceOptions}
-              placeholder="Select Service"
-              onChange={(value) => handleInputChange("service_name", value)}
-              defaultValue=""
-            />
-            {errors.service_name && (
-              <p className="mt-1.5 text-xs text-error-500">{errors.service_name}</p>
-            )}
-          </div>
-
-          {/* Date */}
-          <div>
-            <DatePicker
-              id="booking-date"
-              label="Date *"
-              placeholder="Select a date"
-              defaultDate={formData.date || undefined}
-              minDate={new Date().toISOString().split("T")[0]}
-              onChange={(_, dateStr) => {
-                if (dateStr) {
-                  handleInputChange("date", dateStr);
-                }
-                // Clear error when date is selected
-                if (errors.date) {
-                  setErrors((prev) => ({ ...prev, date: undefined }));
-                }
-              }}
-            />
-            {errors.date && (
-              <p className="mt-1.5 text-xs text-error-500">{errors.date}</p>
-            )}
-          </div>
-
-          {/* Time */}
-          <div>
-            <Label htmlFor="time">Time *</Label>
-            <Select
-              options={availableTimeSlots}
-              placeholder={
-                formData.staff_name && formData.date && formData.service_name
-                  ? "Select Time"
-                  : "Select Staff, Date, and Service first"
-              }
-              onChange={(value) => handleInputChange("time", value)}
-              defaultValue=""
-              disabled={!formData.staff_name || !formData.date || !formData.service_name}
-            />
-            {errors.time && (
-              <p className="mt-1.5 text-xs text-error-500">{errors.time}</p>
-            )}
-            {formData.staff_name && formData.date && formData.service_name && (
-              <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                {availableTimeSlots.length - 1} time slot(s) available
-              </p>
-            )}
-          </div>
-
-          {/* Status */}
-          <div>
-            <Label htmlFor="status">Status *</Label>
-            <Select
-              options={statusOptions}
-              placeholder="Select Status"
-              onChange={(value) => handleInputChange("status", value as BookingFormData["status"])}
-              defaultValue="pending"
-            />
-          </div>
-        </div>
-
-        {/* Free Appointment Section */}
-        {customerData && customerData.free_appointment_available && formData.service_name && (
-          <div className="rounded-xl border-2 border-brand-200 bg-brand-50 p-4 dark:border-brand-800 dark:bg-brand-900/20">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge color="success" size="sm">
-                    Free Appointment Available!
-                  </Badge>
-                </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
-                  This customer has completed {customerData.completed_bookings_count} bookings and is eligible for a free appointment.
-                </p>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_free_appointment}
-                    onChange={(e) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        is_free_appointment: e.target.checked,
-                      }));
-                    }}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800"
+          {/* Tab Content */}
+          <div className="min-h-[400px]">
+            {/* Tab 1: Service */}
+            {activeTab === "service" && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="service_select">Add Service *</Label>
+                  <SearchableSelect
+                    options={serviceOptions}
+                    placeholder="Search and select a service to add..."
+                    searchPlaceholder="Search services by name, price, duration, or category..."
+                    onChange={handleServiceSelect}
+                    defaultValue=""
+                    disabled={serviceOptions.length === 0}
                   />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Use Free Appointment
-                  </span>
-                </label>
-              </div>
-            </div>
-          </div>
-        )}
+                  {errors.services && (
+                    <p className="mt-1.5 text-xs text-error-500">{errors.services}</p>
+                  )}
+                  {formData.services.length === 0 && (
+                    <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      Please add at least one service to continue
+                    </p>
+                  )}
+                </div>
 
-        {/* Booking Price Display */}
-        {formData.service_name && (
-          <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Booking Price:
-              </span>
-              <span className={`text-lg font-bold ${formData.is_free_appointment && customerData?.free_appointment_available ? 'text-success-500' : 'text-gray-900 dark:text-white'}`}>
-                {formData.is_free_appointment && customerData?.free_appointment_available ? (
-                  <>
-                    <span className="line-through text-gray-400 mr-2">RM {getServicePrice(formData.service_name)}</span>
-                    RM 0.00 <span className="text-sm text-success-600 dark:text-success-400">(Free)</span>
-                  </>
-                ) : (
-                  `RM ${bookingPrice}`
+                {/* Services Table */}
+                {selectedServicesData.length > 0 && (
+                  <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 overflow-hidden">
+                    <div className="max-w-full overflow-x-auto">
+                      <Table className="w-full border-collapse">
+                        <TableHeader>
+                          <TableRow className="bg-gray-50 dark:bg-gray-800/50">
+                            <TableCell
+                              isHeader
+                              className="border-b border-r border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                            >
+                              Service Name
+                            </TableCell>
+                            <TableCell
+                              isHeader
+                              className="border-b border-r border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                            >
+                              Category
+                            </TableCell>
+                            <TableCell
+                              isHeader
+                              className="border-b border-r border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 text-start dark:border-gray-700 dark:text-gray-300"
+                            >
+                              Duration
+                            </TableCell>
+                            <TableCell
+                              isHeader
+                              className="border-b border-r border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 text-end dark:border-gray-700 dark:text-gray-300"
+                            >
+                              Price
+                            </TableCell>
+                            <TableCell
+                              isHeader
+                              className="border-b border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 text-center dark:border-gray-700 dark:text-gray-300"
+                            >
+                              Action
+                            </TableCell>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedServicesData.map((service, index) => (
+                            <TableRow
+                              key={service.id}
+                              className={`border-b border-gray-200 dark:border-gray-700 ${
+                                index % 2 === 0
+                                  ? "bg-white dark:bg-white/[0.02]"
+                                  : "bg-gray-50/50 dark:bg-gray-800/30"
+                              }`}
+                            >
+                              <TableCell className="border-r border-gray-200 px-4 py-3 text-sm text-gray-800 dark:text-white/90 dark:border-gray-700">
+                                {service.name}
+                              </TableCell>
+                              <TableCell className="border-r border-gray-200 px-4 py-3 text-sm text-gray-600 dark:text-gray-400 dark:border-gray-700">
+                                {service.category || "—"}
+                              </TableCell>
+                              <TableCell className="border-r border-gray-200 px-4 py-3 text-sm text-gray-600 dark:text-gray-400 dark:border-gray-700">
+                                {service.duration_formatted}
+                              </TableCell>
+                              <TableCell className="border-r border-gray-200 px-4 py-3 text-sm font-medium text-gray-800 text-end dark:text-white/90 dark:border-gray-700">
+                                {service.price_formatted}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleServiceRemove(service.id)}
+                                  className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-error-500 hover:bg-error-50 dark:hover:bg-error-900/20 transition-colors"
+                                  title="Remove service"
+                                >
+                                  <TrashBinIcon className="h-4 w-4" />
+                                </button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {/* Total Row */}
+                          <TableRow className="bg-gray-50 dark:bg-gray-800/50 font-medium">
+                            <td
+                              colSpan={3}
+                              className="border-t border-gray-200 px-4 py-3 text-sm text-gray-700 text-end dark:border-gray-700 dark:text-gray-300"
+                            >
+                              Total:
+                            </td>
+                            <td className="border-t border-gray-200 px-4 py-3 text-sm text-gray-800 text-end dark:text-white/90 dark:border-gray-700">
+                              RM {totalPrice.toFixed(2)}
+                            </td>
+                            <td className="border-t border-gray-200 px-4 py-3 text-sm text-gray-600 dark:text-gray-400 dark:border-gray-700">
+                              {Math.floor(totalDuration / 60)}h {totalDuration % 60}m
+                            </td>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
                 )}
-              </span>
+              </div>
+            )}
+
+            {/* Tab 2: Professional & Date */}
+            {activeTab === "professional" && (
+              <div className="space-y-6">
+                <div>
+                  <Label htmlFor="staff_id">Professional (Staff) *</Label>
+                  <SearchableSelect
+                    options={staffOptions}
+                    placeholder="Search staff by name..."
+                    searchPlaceholder="Search staff..."
+                    onChange={handleStaffSelect}
+                    defaultValue=""
+                  />
+                  {errors.staff_id && (
+                    <p className="mt-1.5 text-xs text-error-500">{errors.staff_id}</p>
+                  )}
+                  {selectedStaff && (
+                    <div className="mt-2 space-y-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Position: {selectedStaff.position}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Phone: {selectedStaff.phone}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <DatePicker
+                    id="booking-date"
+                    label="Booking Date *"
+                    placeholder="Select a date"
+                    defaultDate={formData.booking_date || undefined}
+                    minDate={new Date().toISOString().split("T")[0]}
+                    onChange={(_, dateStr) => {
+                      if (dateStr) {
+                        handleInputChange("booking_date", dateStr);
+                      }
+                    }}
+                  />
+                  {errors.booking_date && (
+                    <p className="mt-1.5 text-xs text-error-500">{errors.booking_date}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="start_time">Start Time *</Label>
+                  <Select
+                    options={timeOptions}
+                    placeholder={
+                      loadingTimeSlots
+                        ? "Loading available times..."
+                        : !formData.staff_id || !formData.booking_date
+                        ? "Select staff and date first"
+                        : formData.services.length === 0
+                        ? "Add at least one service first"
+                        : staffAvailabilityReason
+                        ? staffAvailabilityReason
+                        : "Select start time"
+                    }
+                    onChange={(value) => handleInputChange("start_time", value)}
+                    defaultValue=""
+                    disabled={
+                      loadingTimeSlots ||
+                      !formData.staff_id ||
+                      !formData.booking_date ||
+                      formData.services.length === 0 ||
+                      timeSlots.length === 0
+                    }
+                  />
+                  {loadingTimeSlots && (
+                    <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      Loading available time slots...
+                    </p>
+                  )}
+                  {staffAvailabilityReason && !loadingTimeSlots && (
+                    <p className="mt-1.5 text-xs text-warning-500 dark:text-warning-400">
+                      {staffAvailabilityReason}
+                    </p>
+                  )}
+                  {timeSlotsError && !loadingTimeSlots && (
+                    <p className="mt-1.5 text-xs text-error-500">{timeSlotsError}</p>
+                  )}
+                  {errors.start_time && (
+                    <p className="mt-1.5 text-xs text-error-500">{errors.start_time}</p>
+                  )}
+                  {timeSlots.length > 0 && !loadingTimeSlots && (
+                    <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      {timeSlots.length} available time slot(s)
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Tab 3: Customer & Details */}
+            {activeTab === "customer" && (
+              <div className="space-y-6">
+                <div>
+                  <Label htmlFor="customer_id">Customer *</Label>
+                  <SearchableSelect
+                    options={customerOptions}
+                    placeholder="Search customer by name, email, or phone..."
+                    searchPlaceholder="Search customers..."
+                    onChange={handleCustomerSelect}
+                    defaultValue=""
+                    onAddNew={() => setIsCreateCustomerModalOpen(true)}
+                    showAddButton={true}
+                  />
+                  {errors.customer_id && (
+                    <p className="mt-1.5 text-xs text-error-500">{errors.customer_id}</p>
+                  )}
+                  {selectedCustomer && (
+                    <div className="mt-2 space-y-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Email: {selectedCustomer.email}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Phone: {selectedCustomer.phone}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="status">Status</Label>
+                    <Select
+                      options={[
+                        { value: "1", label: "Pending" },
+                        { value: "2", label: "Confirmed" },
+                      ]}
+                      placeholder="Select Status"
+                      onChange={(value) => handleInputChange("status", parseInt(value))}
+                      defaultValue="1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="notes">Notes</Label>
+                    <Input
+                      id="notes"
+                      name="notes"
+                      type="text"
+                      placeholder="Additional notes (optional)"
+                      value={formData.notes}
+                      onChange={(e) => handleInputChange("notes", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 4: Summary */}
+            {activeTab === "summary" && (
+              <div className="space-y-6">
+                <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                    Booking Summary
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    {/* Customer */}
+                    <div className="border-b border-gray-200 pb-3 dark:border-gray-700">
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Customer
+                      </div>
+                      <div className="text-sm text-gray-800 dark:text-white mt-1">
+                        {selectedCustomer ? selectedCustomer.name : "Not selected"}
+                      </div>
+                      {selectedCustomer && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {selectedCustomer.email} • {selectedCustomer.phone}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Professional */}
+                    <div className="border-b border-gray-200 pb-3 dark:border-gray-700">
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Professional
+                      </div>
+                      <div className="text-sm text-gray-800 dark:text-white mt-1">
+                        {selectedStaff ? selectedStaff.name : "Not selected"}
+                      </div>
+                      {selectedStaff && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {selectedStaff.position}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Date & Time */}
+                    <div className="border-b border-gray-200 pb-3 dark:border-gray-700">
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Date & Time
+                      </div>
+                      <div className="text-sm text-gray-800 dark:text-white mt-1">
+                        {formData.booking_date
+                          ? new Date(formData.booking_date).toLocaleDateString("en-US", {
+                              weekday: "long",
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })
+                          : "Not selected"}
+                      </div>
+                      {formData.start_time && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {timeSlots.find((s) => s.start_time === formData.start_time)?.formatted ||
+                            formData.start_time}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Services */}
+                    <div className="border-b border-gray-200 pb-3 dark:border-gray-700">
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Services ({selectedServicesData.length})
+                      </div>
+                      <div className="space-y-1">
+                        {selectedServicesData.map((service) => (
+                          <div
+                            key={service.id}
+                            className="text-sm text-gray-800 dark:text-white"
+                          >
+                            • {service.name} - {service.price_formatted} ({service.duration_formatted})
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Total */}
+                    <div className="pt-2">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Total Duration:
+                        </div>
+                        <div className="text-sm font-medium text-gray-800 dark:text-white">
+                          {Math.floor(totalDuration / 60)}h {totalDuration % 60}m
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="text-base font-semibold text-gray-800 dark:text-white">
+                          Total Price:
+                        </div>
+                        <div className="text-lg font-bold text-gray-900 dark:text-white">
+                          RM {totalPrice.toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status & Notes */}
+                    {(formData.status || formData.notes) && (
+                      <div className="border-t border-gray-200 pt-3 dark:border-gray-700">
+                        {formData.status && (
+                          <div className="mb-2">
+                            <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Status
+                            </div>
+                            <div className="text-sm text-gray-800 dark:text-white mt-1">
+                              {formData.status === 1 ? "Pending" : "Confirmed"}
+                            </div>
+                          </div>
+                        )}
+                        {formData.notes && (
+                          <div>
+                            <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Notes
+                            </div>
+                            <div className="text-sm text-gray-800 dark:text-white mt-1">
+                              {formData.notes}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Tab Navigation Buttons */}
+          <div className="flex items-center justify-between gap-4 border-t border-gray-200 pt-6 dark:border-gray-700">
+            <div className="flex items-center gap-4">
+              {activeTab !== "service" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePreviousTab}
+                  disabled={isSubmitting}
+                >
+                  Previous
+                </Button>
+              )}
+              {activeTab === "service" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-4">
+              {activeTab !== "summary" && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={handleNextTab}
+                  disabled={!canAccessTab(getNextTab(activeTab)) || isSubmitting}
+                >
+                  Next
+                </Button>
+              )}
+              {activeTab === "summary" && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancel}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className={`inline-flex items-center justify-center gap-2 rounded-lg transition px-5 py-3.5 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  >
+                    {isSubmitting ? "Creating..." : "Create Booking"}
+                  </button>
+                </>
+              )}
             </div>
           </div>
-        )}
-
-        {/* Form Actions */}
-        <div className="flex items-center justify-end gap-4 border-t border-gray-200 pt-6 dark:border-gray-700">
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className={`inline-flex items-center justify-center gap-2 rounded-lg transition px-5 py-3.5 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300 disabled:cursor-not-allowed disabled:opacity-50 ${
-              isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-          >
-            {isSubmitting ? "Creating..." : "Create Booking"}
-          </button>
-        </div>
-      </Form>
-    </ComponentCard>
+        </Form>
+      </ComponentCard>
     
-    {/* Create Customer Modal */}
-    <CreateCustomerModal
-      isOpen={isCreateCustomerModalOpen}
-      onClose={() => setIsCreateCustomerModalOpen(false)}
-      onCustomerCreated={handleCustomerCreated}
-    />
+      {/* Create Customer Modal */}
+      <CreateCustomerModal
+        isOpen={isCreateCustomerModalOpen}
+        onClose={() => setIsCreateCustomerModalOpen(false)}
+        onCustomerCreated={handleCustomerCreated}
+      />
     </>
   );
 }
-
